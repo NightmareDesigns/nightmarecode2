@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nightmare Code</title>
+    <title>Nightmare Designs Code</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">🩸 NIGHTMARE</div>
+                <div class="logo drip-text" aria-label="Nightmare Designs Code">🩸 NIGHTMARE DESIGNS CODE</div>
                 <button id="toggleSidebar" class="toggle-btn">☰</button>
             </div>
 
@@ -37,8 +37,8 @@
                 <div class="settings-title">Settings</div>
                 <div class="setting-item">
                     <label>Matrix Opacity</label>
-                    <input type="range" id="opacitySlider" min="0" max="100" value="20">
-                    <span id="opacityValue">20%</span>
+                    <input type="range" id="opacitySlider" min="0" max="100" value="40">
+                    <span id="opacityValue">40%</span>
                 </div>
                 <div class="setting-item">
                     <label>Animation Speed</label>
@@ -47,6 +47,32 @@
                 </div>
                 <div class="setting-item">
                     <button id="pauseBtn" class="action-btn">⏸ Pause Matrix</button>
+                </div>
+
+                <div class="settings-title">Theme</div>
+                <div class="setting-item">
+                    <label for="themeBackgroundColor">Background Color</label>
+                    <input type="color" id="themeBackgroundColor" value="#000000">
+                </div>
+                <div class="setting-item">
+                    <label for="themeFrameColor">Frame/Blood Color</label>
+                    <input type="color" id="themeFrameColor" value="#8b0000">
+                </div>
+                <div class="setting-item">
+                    <label for="themeTextColor">Text Color</label>
+                    <input type="color" id="themeTextColor" value="#39ff14">
+                </div>
+                <div class="setting-item">
+                    <label for="themeMatrixColor">Matrix Color</label>
+                    <input type="color" id="themeMatrixColor" value="#39ff14">
+                </div>
+                <div class="setting-item">
+                    <label>Panel Opacity</label>
+                    <input type="range" id="panelOpacitySlider" min="10" max="100" value="60">
+                    <span id="panelOpacityValue">60%</span>
+                </div>
+                <div class="setting-item">
+                    <button id="resetThemeBtn" class="action-btn">↺ Reset Theme Defaults</button>
                 </div>
             </div>
         </div>
@@ -66,7 +92,7 @@
             <!-- Editor Section -->
             <div class="editor-wrapper">
                 <div class="line-numbers" id="lineNumbers"></div>
-                <textarea id="codeEditor" class="code-editor" spellcheck="false" placeholder="// Start coding in Nightmare Code...\n// Your code deserves a dark aesthetic"></textarea>
+                <textarea id="codeEditor" class="code-editor" spellcheck="false" placeholder="// Start coding in Nightmare Designs Code...\n// Blood theme + Matrix aesthetic"></textarea>
             </div>
 
             <!-- Terminal Panel -->
@@ -76,7 +102,7 @@
                     <button id="toggleTerminal" class="toggle-btn">−</button>
                 </div>
                 <div id="terminal" class="terminal">
-                    <div class="terminal-line"><span class="prompt">$</span> Welcome to Nightmare Code Terminal</div>
+                    <div class="terminal-line"><span class="prompt">$</span> Welcome to Nightmare Designs Code Terminal</div>
                     <div class="terminal-line"><span class="prompt">$</span> Type 'help' for commands</div>
                 </div>
                 <input type="text" id="terminalInput" class="terminal-input" placeholder="Terminal input (demo mode)...">
