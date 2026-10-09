@@ -65,6 +65,7 @@ class NightmareCodeEditor {
 
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            if (e.defaultPrevented) return;
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key.toLowerCase()) {
                     case 's':
@@ -73,7 +74,7 @@ class NightmareCodeEditor {
                         break;
                     case 'n':
                         e.preventDefault();
-                        if (window.fileManager) fileManager.createNewFile();
+                        if (typeof fileManager !== 'undefined') fileManager.createNewFile();
                         break;
                     case 'o':
                         e.preventDefault();
@@ -96,20 +97,18 @@ class NightmareCodeEditor {
             editor.selectionStart = editor.selectionEnd = start + 1;
 
             // keep file state in sync
-            if (window.fileManager && fileManager.currentFile && fileManager.files[fileManager.currentFile]) {
-                fileManager.files[fileManager.currentFile].content = editor.value;
-            }
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 
     saveFile() {
-        if (!window.fileManager) return;
+        if (typeof fileManager === 'undefined') return;
         fileManager.saveCurrentFile();
         this.showNotification('File saved: ' + fileManager.currentFile);
     }
 
     openFileDialog() {
-        if (!window.fileManager) return;
+        if (typeof fileManager === 'undefined') return;
         const fileName = prompt('Enter file name:');
         if (fileName) {
             if (!fileManager.files[fileName]) {
@@ -129,7 +128,10 @@ class NightmareCodeEditor {
 
         const line = document.createElement('div');
         line.className = 'terminal-line';
-        line.innerHTML = `<span class="prompt">$</span> ${normalized}`;
+        const prompt = document.createElement('span');
+        prompt.className = 'prompt';
+        prompt.textContent = '$';
+        line.append(prompt, document.createTextNode(' ' + normalized));
         terminal.appendChild(line);
 
         const args = normalized.split(' ');
@@ -160,7 +162,7 @@ class NightmareCodeEditor {
                 return;
 
             case 'ls': {
-                const files = window.fileManager ? Object.keys(fileManager.files) : ['untitled.txt'];
+                const files = typeof fileManager !== 'undefined' ? Object.keys(fileManager.files) : ['untitled.txt'];
                 response = files.join('  ');
                 break;
             }
@@ -169,7 +171,7 @@ class NightmareCodeEditor {
                 const target = args.slice(1).join(' ').trim();
                 if (!target) {
                     response = 'Usage: cat <file>';
-                } else if (window.fileManager && fileManager.files[target]) {
+                } else if (typeof fileManager !== 'undefined' && fileManager.files[target]) {
                     response = fileManager.files[target].content || '(empty file)';
                 } else {
                     response = `File not found: ${target}`;
@@ -184,7 +186,7 @@ class NightmareCodeEditor {
 
             case 'run': {
                 const maybeFile = args.slice(1).join(' ').trim();
-                const targetFile = maybeFile || (window.fileManager ? fileManager.currentFile : null);
+                const targetFile = maybeFile || (typeof fileManager !== 'undefined' ? fileManager.currentFile : null);
 
                 if (!targetFile) {
                     response = 'No active file selected.';
@@ -239,7 +241,7 @@ class NightmareCodeEditor {
     }
 
     updateInitialState() {
-        if (!window.fileManager) return;
+        if (typeof fileManager === 'undefined') return;
         fileManager.updateEditor();
         fileManager.updateLineNumbers();
         fileManager.updateStatusBar();
