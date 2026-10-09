@@ -19,7 +19,12 @@ class FileManager {
     }
 
     loadFiles() {
-        const stored = localStorage.getItem('nightmare_files');
+        let stored;
+        try {
+            stored = localStorage.getItem('nightmare_files');
+        } catch (_) {
+            // Editing remains available when browser storage is disabled.
+        }
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
@@ -36,7 +41,11 @@ class FileManager {
     }
 
     saveFiles() {
-        localStorage.setItem('nightmare_files', JSON.stringify(this.files));
+        try {
+            localStorage.setItem('nightmare_files', JSON.stringify(this.files));
+        } catch (_) {
+            console.warn('Browser storage unavailable; files remain in memory.');
+        }
     }
 
     createNewFile() {
@@ -208,6 +217,11 @@ class FileManager {
 
         const editor = document.getElementById('codeEditor');
         if (!editor) return;
+
+        editor.addEventListener('scroll', () => {
+            const lineNumbers = document.getElementById('lineNumbers');
+            if (lineNumbers) lineNumbers.scrollTop = editor.scrollTop;
+        });
 
         editor.addEventListener('input', () => {
             this.updateLineNumbers();

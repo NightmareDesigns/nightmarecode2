@@ -1,11 +1,13 @@
 :root {
     --primary-color: #00ff00;
-    --dark-bg: #0a0e27;
-    --dark-bg-secondary: #0f1419;
-    --dark-bg-tertiary: #151a2b;
-    --text-color: #e0e0e0;
-    --border-color: #1e2139;
-    --accent-color: #ff0080;
+    --dark-bg: #000000;
+    --panel-bg: rgba(0, 0, 0, 0.55);
+    --dark-bg-secondary: var(--panel-bg);
+    --dark-bg-tertiary: var(--panel-bg);
+    --text-color: #00ff00;
+    --border-color: #b30000;
+    --accent-color: var(--border-color);
+    --matrix-color: #00ff00;
     --success-color: #00d946;
     --warning-color: #ffaa00;
     --error-color: #ff3333;
@@ -23,6 +25,9 @@ body {
     color: var(--text-color);
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Canvas Background */
@@ -34,12 +39,16 @@ body {
     height: 100%;
     z-index: 0;
     opacity: 0.2;
+    pointer-events: none;
 }
 
 /* Main Container */
 .editor-container {
     display: flex;
-    height: 100vh;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    border: 2px solid var(--border-color);
     position: relative;
     z-index: 1;
 }
@@ -47,7 +56,9 @@ body {
 /* Sidebar */
 .sidebar {
     width: 300px;
-    background-color: rgba(15, 20, 25, 0.95);
+    max-width: 100%;
+    flex-shrink: 0;
+    background-color: var(--panel-bg);
     border-right: 2px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -60,8 +71,12 @@ body {
     border-right: none;
 }
 
-.sidebar-header {
-    padding: 20px 15px;
+.app-header {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    padding: 12px 15px 24px;
+    background: var(--panel-bg);
     border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -69,11 +84,68 @@ body {
 }
 
 .logo {
-    font-size: 16px;
+    position: relative;
+    font-family: Georgia, serif;
+    font-size: clamp(20px, 4vw, 32px);
     font-weight: bold;
-    color: var(--primary-color);
-    text-shadow: 0 0 10px var(--primary-color);
-    letter-spacing: 2px;
+    color: var(--border-color);
+    letter-spacing: 1px;
+    margin-right: 12px;
+}
+
+.blood-drips {
+    position: absolute;
+    inset: 100% 0 auto;
+    height: 16px;
+    pointer-events: none;
+}
+
+.blood-drips i {
+    position: absolute;
+    top: -3px;
+    left: 12%;
+    width: 5px;
+    height: 12px;
+    border-radius: 0 0 70% 70%;
+    background: var(--border-color);
+    transform-origin: top;
+    animation: blood-drip 4s ease-in-out infinite alternate;
+}
+
+.blood-drips i:nth-child(2) { left: 31%; height: 8px; animation-delay: -1s; }
+.blood-drips i:nth-child(3) { left: 50%; animation-delay: -2s; }
+.blood-drips i:nth-child(4) { left: 72%; height: 10px; animation-delay: -3s; }
+.blood-drips i:nth-child(5) { left: 90%; height: 7px; animation-delay: -1.5s; }
+
+@keyframes blood-drip {
+    from { transform: scaleY(0.55); }
+    to { transform: scaleY(1.2); }
+}
+
+.drips-paused .blood-drips i { animation: none; }
+
+input:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--text-color);
+    outline-offset: -2px;
+}
+
+::selection {
+    background: var(--text-color);
+    color: var(--dark-bg);
+}
+
+.theme-settings {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    min-width: 0;
+}
+
+.setting-item input[type="color"] {
+    width: 100%;
+    height: 32px;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
 }
 
 .toggle-btn {
@@ -92,6 +164,7 @@ body {
 /* File Explorer */
 .file-explorer {
     flex: 1;
+    flex-shrink: 0;
     padding: 15px;
     border-bottom: 2px solid var(--border-color);
 }
@@ -168,6 +241,7 @@ body {
 /* Settings Panel */
 .settings-panel {
     padding: 15px;
+    flex-shrink: 0;
 }
 
 .settings-title {
@@ -232,13 +306,16 @@ body {
 /* Editor Area */
 .editor-area {
     flex: 1;
+    min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    background-color: rgba(10, 14, 39, 0.8);
+    background-color: transparent;
 }
 
 /* Tabs */
 .tabs {
+    flex-shrink: 0;
     background-color: var(--dark-bg-secondary);
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -299,15 +376,19 @@ body {
 /* Editor Wrapper */
 .editor-wrapper {
     flex: 1;
+    min-height: 0;
+    min-width: 0;
     display: flex;
-    background-color: var(--dark-bg);
+    background-color: var(--panel-bg);
     border-bottom: 1px solid var(--border-color);
     overflow: hidden;
 }
 
 .line-numbers {
     background-color: var(--dark-bg-secondary);
-    color: #555;
+    color: var(--text-color);
+    white-space: pre;
+    flex-shrink: 0;
     padding: 10px 8px;
     text-align: right;
     user-select: none;
@@ -320,7 +401,9 @@ body {
 
 .code-editor {
     flex: 1;
-    background-color: var(--dark-bg);
+    min-width: 0;
+    background-color: transparent;
+    caret-color: var(--text-color);
     color: var(--primary-color);
     border: none;
     outline: none;
@@ -336,7 +419,8 @@ body {
 }
 
 .code-editor::placeholder {
-    color: #444;
+    color: var(--text-color);
+    opacity: 0.65;
 }
 
 .code-editor::-webkit-scrollbar {
@@ -359,6 +443,9 @@ body {
 
 /* Terminal Panel */
 .terminal-panel {
+    flex-shrink: 0;
+    min-height: 0;
+    overflow: hidden;
     background-color: var(--dark-bg-secondary);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -368,10 +455,14 @@ body {
 }
 
 .terminal-panel.collapsed {
-    height: 25px;
+    height: 34px;
 }
 
+.terminal-panel.collapsed .terminal,
+.terminal-panel.collapsed .terminal-input { display: none; }
+
 .terminal-header {
+    flex-shrink: 0;
     padding: 8px 15px;
     background-color: var(--dark-bg-tertiary);
     border-bottom: 1px solid var(--border-color);
@@ -387,6 +478,7 @@ body {
 
 .terminal {
     flex: 1;
+    min-height: 0;
     padding: 10px 15px;
     overflow-y: auto;
     font-size: 12px;
@@ -421,6 +513,8 @@ body {
 }
 
 .terminal-input {
+    flex-shrink: 0;
+    min-width: 0;
     padding: 8px 15px;
     background-color: var(--dark-bg);
     color: var(--primary-color);
@@ -438,6 +532,9 @@ body {
 
 /* Status Bar */
 .status-bar {
+    flex-shrink: 0;
+    overflow-x: auto;
+    white-space: nowrap;
     background-color: var(--dark-bg-secondary);
     border-top: 1px solid var(--border-color);
     padding: 0 15px;
@@ -478,7 +575,7 @@ body {
 @media (max-width: 768px) {
     .sidebar {
         position: absolute;
-        height: 100vh;
+        height: 100%;
         z-index: 1000;
         box-shadow: 2px 0 20px rgba(0, 255, 0, 0.2);
     }
@@ -501,4 +598,11 @@ body {
 
 .glow {
     animation: glow 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
 }

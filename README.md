@@ -1,4 +1,4 @@
-# 🩸 Nightmare Code
+# 🩸 Nightmare Designs Code
 
 A dark, aesthetic VS Code-inspired code editor with an animated Matrix-style background. Built with vanilla HTML, CSS, and JavaScript.
 
@@ -68,6 +68,11 @@ cd nightmarecode2
    - Adjust "Matrix Opacity" slider (0-100%)
    - Adjust "Animation Speed" slider (1x-10x)
    - Click "Pause Matrix" to stop/resume animation
+   - The **Theme** section changes background, frame/blood, text, and Matrix colors.
+   - Defaults: pure black (`#000000`), blood red (`#b30000`), bright-green text and Matrix (`#00ff00`), and 55% editor/panel opacity.
+   - **Editor / panel opacity** controls the see-through surfaces independently of **Matrix Opacity** (20% by default).
+   - Theme settings are saved locally and restored on reload. **Reset theme defaults** resets colors, panel opacity, and decorative drips, without changing files or Matrix controls.
+   - Disable **Animate blood drips** to stop the title decoration. Reduced-motion preferences disable drips and start Matrix paused with a static background; Matrix can be explicitly resumed. Animation also pauses while the page is hidden.
 
 5. **Terminal**
    - Type commands in the terminal input (demo mode)
@@ -83,6 +88,7 @@ nightmarecode2/
 │   └── style.css          # All styling and theming
 ├── js/
 │   ├── matrix.js          # Matrix background animation
+│   ├── theme.js           # Validated, persistent theme controls
 │   ├── filemanager.js     # File management system
 │   └── editor.js          # Editor core functionality
 └── README.md              # This file
@@ -92,13 +98,13 @@ nightmarecode2/
 
 ### Change Colors
 
-Edit the CSS variables in `css/style.css`:
+Use **Settings → Theme** for live, persistent changes, or edit the defaults in `css/style.css` and `js/theme.js`:
 
 ```css
 :root {
     --primary-color: #00ff00;      /* Neon green */
-    --dark-bg: #0a0e27;            /* Dark background */
-    --accent-color: #ff0080;       /* Accent color */
+    --dark-bg: #000000;            /* Black background */
+    --border-color: #b30000;       /* Blood-red frame and title */
     /* ... more variables ... */
 }
 ```
@@ -127,6 +133,17 @@ Requires browser support for:
 - LocalStorage
 - ES6 JavaScript
 
+## Browser Regression Checks
+
+Serve the app with `python -m http.server 8000`, then open
+`http://localhost:8000/tests/browser.html` in a real browser. The dependency-free
+test page checks rendered canvas pixels, resize and timing, theme controls and
+persistence/reset, editor shortcuts, console submission, narrow layout, and
+invalid/unavailable storage and canvas fallbacks. Use a separate test origin
+without saved work; tests temporarily modify and then restore local storage.
+Run again with your browser/OS reduced-motion preference enabled to check the
+static fallback. Results and assertion counts appear on the page.
+
 ## Performance
 
 - Optimized Canvas rendering using requestAnimationFrame
@@ -145,7 +162,7 @@ Requires browser support for:
 
 - [ ] Real syntax highlighting with highlight.js
 - [ ] Cloud storage integration
-- [ ] Theme customization UI
+- [x] Theme customization UI
 - [ ] Search and replace functionality
 - [ ] Git integration
 - [ ] Plugin system

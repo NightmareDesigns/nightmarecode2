@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nightmare Code</title>
+    <title>Nightmare Designs Code</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <!-- Matrix Background Canvas -->
-    <canvas id="matrixCanvas"></canvas>
+    <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+    <header class="app-header">
+        <h1 class="logo">Nightmare Designs Code<span class="blood-drips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></h1>
+        <button id="toggleSidebar" class="toggle-btn" aria-label="Toggle sidebar">☰</button>
+    </header>
 
     <!-- Main Editor Container -->
     <div class="editor-container">
         <!-- Sidebar -->
         <div class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">🩸 NIGHTMARE</div>
-                <button id="toggleSidebar" class="toggle-btn">☰</button>
-            </div>
-
             <!-- File Explorer -->
             <div class="file-explorer">
                 <div class="explorer-title">Explorer</div>
@@ -36,18 +35,46 @@
             <div class="settings-panel">
                 <div class="settings-title">Settings</div>
                 <div class="setting-item">
-                    <label>Matrix Opacity</label>
+                    <label for="opacitySlider">Matrix Opacity</label>
                     <input type="range" id="opacitySlider" min="0" max="100" value="20">
                     <span id="opacityValue">20%</span>
                 </div>
                 <div class="setting-item">
-                    <label>Animation Speed</label>
+                    <label for="speedSlider">Animation Speed</label>
                     <input type="range" id="speedSlider" min="1" max="10" value="3">
                     <span id="speedValue">3x</span>
                 </div>
                 <div class="setting-item">
                     <button id="pauseBtn" class="action-btn">⏸ Pause Matrix</button>
                 </div>
+                <fieldset class="theme-settings">
+                    <legend class="settings-title">Theme</legend>
+                    <div class="setting-item">
+                        <label for="backgroundColor">Background color</label>
+                        <input type="color" id="backgroundColor" value="#000000">
+                    </div>
+                    <div class="setting-item">
+                        <label for="bloodColor">Frame / blood color</label>
+                        <input type="color" id="bloodColor" value="#b30000">
+                    </div>
+                    <div class="setting-item">
+                        <label for="textColor">Text color</label>
+                        <input type="color" id="textColor" value="#00ff00">
+                    </div>
+                    <div class="setting-item">
+                        <label for="matrixColor">Matrix color</label>
+                        <input type="color" id="matrixColor" value="#00ff00">
+                    </div>
+                    <div class="setting-item">
+                        <label for="panelOpacity">Editor / panel opacity (not Matrix)</label>
+                        <input type="range" id="panelOpacity" min="0" max="100" value="55">
+                        <span id="panelOpacityValue">55%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label for="animateDrips"><input type="checkbox" id="animateDrips" checked> Animate blood drips</label>
+                    </div>
+                    <button id="resetTheme" class="action-btn">Reset theme defaults</button>
+                </fieldset>
             </div>
         </div>
 
@@ -66,7 +93,7 @@
             <!-- Editor Section -->
             <div class="editor-wrapper">
                 <div class="line-numbers" id="lineNumbers"></div>
-                <textarea id="codeEditor" class="code-editor" spellcheck="false" placeholder="// Start coding in Nightmare Code...\n// Your code deserves a dark aesthetic"></textarea>
+                <textarea id="codeEditor" class="code-editor" aria-label="Code editor" spellcheck="false" placeholder="// Start coding in Nightmare Designs Code..."></textarea>
             </div>
 
             <!-- Terminal Panel -->
@@ -79,7 +106,7 @@
                     <div class="terminal-line"><span class="prompt">$</span> Welcome to Nightmare Code Terminal</div>
                     <div class="terminal-line"><span class="prompt">$</span> Type 'help' for commands</div>
                 </div>
-                <input type="text" id="terminalInput" class="terminal-input" placeholder="Terminal input (demo mode)...">
+                <input type="text" id="terminalInput" class="terminal-input" aria-label="Terminal command" placeholder="Terminal input (demo mode)...">
             </div>
 
             <!-- Status Bar -->
@@ -93,6 +120,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="js/theme.js"></script>
     <script src="js/matrix.js"></script>
     <script src="js/filemanager.js"></script>
     <script src="js/editor.js"></script>
