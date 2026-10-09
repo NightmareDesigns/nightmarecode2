@@ -1,14 +1,16 @@
 :root {
-    --primary-color: #00ff00;
-    --dark-bg: #0a0e27;
-    --dark-bg-secondary: #0f1419;
-    --dark-bg-tertiary: #151a2b;
-    --text-color: #e0e0e0;
-    --border-color: #1e2139;
-    --accent-color: #ff0080;
-    --success-color: #00d946;
+    --primary-color: #39ff14;
+    --dark-bg: #000000;
+    --dark-bg-secondary: #050505;
+    --dark-bg-tertiary: #0d0d0d;
+    --text-color: #39ff14;
+    --border-color: #8b0000;
+    --accent-color: #b30000;
+    --success-color: #39ff14;
     --warning-color: #ffaa00;
     --error-color: #ff3333;
+    --matrix-color: #39ff14;
+    --panel-opacity: 0.6;
 }
 
 * {
@@ -33,7 +35,8 @@ body {
     width: 100%;
     height: 100%;
     z-index: 0;
-    opacity: 0.2;
+    opacity: 1;
+    pointer-events: none;
 }
 
 /* Main Container */
@@ -42,12 +45,14 @@ body {
     height: 100vh;
     position: relative;
     z-index: 1;
+    border: 2px solid var(--border-color);
+    box-shadow: inset 0 0 14px rgba(139, 0, 0, 0.45);
 }
 
 /* Sidebar */
 .sidebar {
-    width: 300px;
-    background-color: rgba(15, 20, 25, 0.95);
+    width: 320px;
+    background-color: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
     border-right: 2px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -61,7 +66,7 @@ body {
 }
 
 .sidebar-header {
-    padding: 20px 15px;
+    padding: 16px 12px;
     border-bottom: 2px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -69,24 +74,43 @@ body {
 }
 
 .logo {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
-    color: var(--primary-color);
-    text-shadow: 0 0 10px var(--primary-color);
-    letter-spacing: 2px;
+    color: var(--border-color);
+    text-shadow: 0 0 6px rgba(139, 0, 0, 0.8);
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+
+.drip-text {
+    position: relative;
+    display: inline-block;
+}
+
+.drip-text::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 100%;
+    height: 8px;
+    background: repeating-radial-gradient(circle at 10% 0%, transparent 0 3px, var(--border-color) 4px 6px);
+    animation: drip 2.4s ease-in-out infinite;
+    opacity: 0.8;
+    pointer-events: none;
 }
 
 .toggle-btn {
     background: none;
     border: none;
-    color: var(--primary-color);
+    color: var(--text-color);
     font-size: 18px;
     cursor: pointer;
     transition: text-shadow 0.2s;
 }
 
 .toggle-btn:hover {
-    text-shadow: 0 0 10px var(--primary-color);
+    text-shadow: 0 0 10px var(--text-color);
 }
 
 /* File Explorer */
@@ -99,7 +123,7 @@ body {
 .explorer-title {
     font-size: 12px;
     font-weight: bold;
-    color: var(--primary-color);
+    color: var(--text-color);
     text-transform: uppercase;
     margin-bottom: 10px;
     letter-spacing: 1px;
@@ -124,14 +148,14 @@ body {
 }
 
 .file-item:hover {
-    background-color: var(--dark-bg-tertiary);
-    color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--border-color) 18%, transparent);
+    color: var(--text-color);
 }
 
 .file-item.active {
-    background-color: var(--dark-bg-tertiary);
-    color: var(--primary-color);
-    border-left: 3px solid var(--primary-color);
+    background-color: color-mix(in srgb, var(--border-color) 24%, transparent);
+    color: var(--text-color);
+    border-left: 3px solid var(--text-color);
 }
 
 .file-icon {
@@ -149,8 +173,8 @@ body {
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
-    background-color: var(--dark-bg-tertiary);
-    color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--dark-bg-tertiary) 90%, transparent);
+    color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 3px;
     cursor: pointer;
@@ -160,9 +184,9 @@ body {
 }
 
 .action-btn:hover {
-    background-color: var(--dark-bg);
-    box-shadow: 0 0 10px var(--primary-color);
-    border-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--border-color) 22%, transparent);
+    box-shadow: 0 0 8px var(--border-color);
+    border-color: var(--text-color);
 }
 
 /* Settings Panel */
@@ -173,14 +197,14 @@ body {
 .settings-title {
     font-size: 12px;
     font-weight: bold;
-    color: var(--primary-color);
+    color: var(--text-color);
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin: 10px 0;
     letter-spacing: 1px;
 }
 
 .setting-item {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -209,24 +233,24 @@ body {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: var(--primary-color);
+    background: var(--text-color);
     cursor: pointer;
-    box-shadow: 0 0 5px var(--primary-color);
+    box-shadow: 0 0 5px var(--text-color);
 }
 
 .setting-item input[type="range"]::-moz-range-thumb {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: var(--primary-color);
+    background: var(--text-color);
     cursor: pointer;
     border: none;
-    box-shadow: 0 0 5px var(--primary-color);
+    box-shadow: 0 0 5px var(--text-color);
 }
 
 .setting-item span {
     font-size: 11px;
-    color: var(--primary-color);
+    color: var(--text-color);
 }
 
 /* Editor Area */
@@ -234,12 +258,12 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: rgba(10, 14, 39, 0.8);
+    background-color: transparent;
 }
 
 /* Tabs */
 .tabs {
-    background-color: var(--dark-bg-secondary);
+    background-color: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -255,7 +279,7 @@ body {
 
 .tab {
     padding: 8px 15px;
-    background-color: var(--dark-bg-tertiary);
+    background-color: color-mix(in srgb, var(--dark-bg-tertiary) 85%, transparent);
     border: 1px solid var(--border-color);
     border-bottom: none;
     color: var(--text-color);
@@ -270,14 +294,14 @@ body {
 }
 
 .tab:hover {
-    background-color: var(--dark-bg);
-    color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--border-color) 20%, transparent);
+    color: var(--text-color);
 }
 
 .tab.active {
-    background-color: var(--dark-bg);
-    border-bottom: 2px solid var(--primary-color);
-    color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--border-color) 26%, transparent);
+    border-bottom: 2px solid var(--text-color);
+    color: var(--text-color);
 }
 
 .tab-close {
@@ -300,14 +324,14 @@ body {
 .editor-wrapper {
     flex: 1;
     display: flex;
-    background-color: var(--dark-bg);
+    background-color: transparent;
     border-bottom: 1px solid var(--border-color);
     overflow: hidden;
 }
 
 .line-numbers {
-    background-color: var(--dark-bg-secondary);
-    color: #555;
+    background-color: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
+    color: color-mix(in srgb, var(--text-color) 50%, #111);
     padding: 10px 8px;
     text-align: right;
     user-select: none;
@@ -320,8 +344,8 @@ body {
 
 .code-editor {
     flex: 1;
-    background-color: var(--dark-bg);
-    color: var(--primary-color);
+    background-color: transparent;
+    color: var(--text-color);
     border: none;
     outline: none;
     padding: 10px 15px;
@@ -331,12 +355,18 @@ body {
     resize: none;
     tab-size: 4;
     -moz-tab-size: 4;
+    caret-color: var(--text-color);
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
 }
 
 .code-editor::placeholder {
-    color: #444;
+    color: color-mix(in srgb, var(--text-color) 45%, #111);
+}
+
+.code-editor::selection {
+    background: color-mix(in srgb, var(--border-color) 45%, transparent);
+    color: #fff;
 }
 
 .code-editor::-webkit-scrollbar {
@@ -354,12 +384,12 @@ body {
 }
 
 .code-editor::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-color);
+    background: var(--text-color);
 }
 
 /* Terminal Panel */
 .terminal-panel {
-    background-color: var(--dark-bg-secondary);
+    background-color: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
     border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -373,13 +403,13 @@ body {
 
 .terminal-header {
     padding: 8px 15px;
-    background-color: var(--dark-bg-tertiary);
+    background-color: color-mix(in srgb, var(--dark-bg-tertiary) calc(var(--panel-opacity) * 100%), transparent);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    color: var(--primary-color);
+    color: var(--text-color);
     font-weight: bold;
     text-transform: uppercase;
     cursor: pointer;
@@ -395,35 +425,22 @@ body {
     scrollbar-color: var(--border-color) transparent;
 }
 
-.terminal::-webkit-scrollbar {
-    width: 6px;
-}
-
-.terminal::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.terminal::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 3px;
-}
-
 .terminal-line {
-    color: var(--primary-color);
+    color: var(--text-color);
     margin-bottom: 4px;
     white-space: pre-wrap;
     word-break: break-word;
 }
 
 .prompt {
-    color: var(--accent-color);
+    color: var(--border-color);
     margin-right: 5px;
 }
 
 .terminal-input {
     padding: 8px 15px;
-    background-color: var(--dark-bg);
-    color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--dark-bg) calc(var(--panel-opacity) * 100%), transparent);
+    color: var(--text-color);
     border: none;
     border-top: 1px solid var(--border-color);
     font-family: 'Courier New', monospace;
@@ -432,13 +449,13 @@ body {
 }
 
 .terminal-input:focus {
-    border-top-color: var(--primary-color);
-    box-shadow: inset 0 1px 0 var(--primary-color);
+    border-top-color: var(--text-color);
+    box-shadow: inset 0 1px 0 var(--text-color);
 }
 
 /* Status Bar */
 .status-bar {
-    background-color: var(--dark-bg-secondary);
+    background-color: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
     border-top: 1px solid var(--border-color);
     padding: 0 15px;
     height: 25px;
@@ -471,7 +488,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-color);
+    background: var(--text-color);
 }
 
 /* Responsive */
@@ -480,7 +497,7 @@ body {
         position: absolute;
         height: 100vh;
         z-index: 1000;
-        box-shadow: 2px 0 20px rgba(0, 255, 0, 0.2);
+        box-shadow: 2px 0 20px rgba(139, 0, 0, 0.35);
     }
 
     .sidebar.collapsed {
@@ -495,10 +512,22 @@ body {
 
 /* Animations */
 @keyframes glow {
-    0%, 100% { text-shadow: 0 0 5px var(--primary-color); }
-    50% { text-shadow: 0 0 20px var(--primary-color); }
+    0%, 100% { text-shadow: 0 0 5px var(--text-color); }
+    50% { text-shadow: 0 0 14px var(--text-color); }
+}
+
+@keyframes drip {
+    0%, 100% { transform: translateY(0); opacity: 0.8; }
+    50% { transform: translateY(4px); opacity: 1; }
 }
 
 .glow {
-    animation: glow 1s ease-in-out infinite;
+    animation: glow 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .glow,
+    .drip-text::after {
+        animation: none;
+    }
 }
