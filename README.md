@@ -41,12 +41,12 @@ git clone https://github.com/NightmareDesigns/nightmarecode2.git
 cd nightmarecode2
 ```
 
-2. Open `index.html` in your web browser:
-   - Simply double-click `index.html`, or
+2. Open `www/index.html` in your web browser:
+   - Simply double-click `www/index.html`, or
    - Use a local server (recommended):
    ```bash
    python -m http.server 8000
-   # Then navigate to http://localhost:8000
+   # Then navigate to http://localhost:8000/www/
    ```
 
 ### Build the desktop app
@@ -59,6 +59,19 @@ npm run build
 ```
 
 `npm run dist` creates the configured distributable; the Windows portable package can be built with `npm run package`.
+
+### Build and install the Android APK
+
+The Android app packages the same editor, file manager, menus, Matrix animation, theme settings, and demo terminal as the desktop version. It adapts to display resizing and touch, keyboard, and mouse input for XREAL glasses and Samsung DeX. The terminal remains demo-only on both desktop and Android.
+
+Install the dependencies and Android SDK, then build a debug APK:
+
+```bash
+npm install
+npm run android:apk
+```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Install it on an Android device with `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`, or copy the APK to the device and open it to install. Enable installation from your chosen source if Android prompts you. For release distribution, create and protect your own signing key and configure a signed release build.
 
 ### Usage
 
@@ -89,13 +102,17 @@ npm run build
 
 ```
 nightmarecode2/
-├── index.html              # Main HTML file
-├── css/
-│   └── style.css          # All styling and theming
-├── js/
-│   ├── matrix.js          # Matrix background animation
-│   ├── filemanager.js     # File management system
-│   └── editor.js          # Editor core functionality
+├── www/
+│   ├── index.html           # Shared browser, Android, and Electron UI
+│   ├── css/
+│   │   ├── editor.css       # Responsive editor layout
+│   │   └── style.css        # Menu styling
+│   └── js/
+│       ├── matrix.js        # Matrix background animation
+│       ├── filemanager.js   # File management system
+│       ├── editor.js        # Editor core functionality
+│       └── menu.js          # Application menu
+├── android/                 # Capacitor Android project
 └── README.md              # This file
 ```
 
@@ -103,7 +120,7 @@ nightmarecode2/
 
 ### Change Colors
 
-Edit the CSS variables in `css/style.css`:
+Edit the CSS variables in `www/css/editor.css`:
 
 ```css
 :root {
@@ -116,7 +133,7 @@ Edit the CSS variables in `css/style.css`:
 
 ### Modify Matrix Characters
 
-In `js/matrix.js`, change the `characters` string:
+In `www/js/matrix.js`, change the `characters` string:
 
 ```javascript
 this.characters = '01ﾊﾐﾋｰｳﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴﾔﾗﾆﾑﾕﾗﾓﾎﾝﾘﾝ';
@@ -124,7 +141,7 @@ this.characters = '01ﾊﾐﾋｰｳﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒ�
 
 ### Add More Languages
 
-Extend the `getFileType()` method in `js/filemanager.js` to support more file types.
+Extend the `getFileType()` method in `www/js/filemanager.js` to support more file types.
 
 ## Browser Compatibility
 
@@ -135,9 +152,7 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 
 ### XREAL and Samsung DeX
 
-The browser version adapts to external-display sizes and supports touch, keyboard, and mouse input, so it can be used from an Android browser while connected to XREAL glasses or in Samsung DeX. Serve the project over HTTP (for example, with the local server above) or use a hosted copy, then open it in the device's browser. The layout follows the available viewport and does not depend on device-specific user-agent detection.
-
-The Electron build is a desktop application, not an Android APK; Android installation and native DeX integration are not included.
+Use the Android APK for a standalone app, or open the browser version from an Android browser. Both use the same renderer and features. The layout follows the available viewport instead of relying on device-specific user-agent detection.
 
 Requires browser support for:
 - Canvas API
