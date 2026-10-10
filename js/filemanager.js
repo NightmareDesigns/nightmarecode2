@@ -3,6 +3,7 @@ class FileManager {
         this.files = this.loadFiles();
         this.currentFile = this.getInitialFile();
         this.workspaceName = '';
+        this.workspaceId = null;
         this.workspaceFiles = [];
         this.desktop = Boolean(window.desktopApp?.isDesktop);
         this.saveTimer = null;
@@ -54,11 +55,18 @@ class FileManager {
         try {
             const recoverable = {};
             for (const [name, file] of Object.entries(this.files)) {
-                if (file.loaded && typeof file.content === 'string') {
+                if (!file.isWorkspaceFile && file.loaded && typeof file.content === 'string') {
                     recoverable[name] = { content: file.content };
                 }
             }
             localStorage.setItem('nightmare_files', JSON.stringify({ version: 1, files: recoverable }));
+            if (this.workspaceId) {
+                const drafts = {};
+                for (const [name, file] of Object.entries(this.files)) {
+                    if (file.isWorkspaceFile && file.loaded && file.dirty) drafts[name] = { content: file.content };
+                }
+                localStorage.setItem(`nightmare_workspace_${this.workspaceId}`, JSON.stringify(drafts));
+            }
         } catch (error) {
             this.setStatus('Recovery storage is full or unavailable.', true);
         }
@@ -100,7 +108,7 @@ class FileManager {
             name,
             content: '',
             loaded: true,
-            dirty: true,
+            dirty: false,
             isWorkspaceFile: Boolean(this.workspaceName)
         };
         this.saveFiles();
@@ -175,6 +183,7 @@ class FileManager {
 
     deleteFile(fileName) {
         if (!this.files[fileName]) return;
+        if (this.files[fileName].dirty && !confirm(`Close ${fileName} and discard its unsaved editor changes?`)) return;
         delete this.files[fileName];
         if (this.currentFile === fileName) {
             this.currentFile = Object.keys(this.files)[0] || null;
@@ -304,24 +313,31 @@ class FileManager {
             this.captureCurrentContent();
             this.saveFiles();
             this.workspaceName = workspace.name;
+            this.workspaceId = workspace.id;
             this.workspaceFiles = workspace.files || [];
+            let workspaceDrafts = {};
+            try {
+                workspaceDrafts = JSON.parse(localStorage.getItem(`nightmare_workspace_${this.workspaceId}`) || '{}');
+            } catch {
+                workspaceDrafts = {};
+            }
             const nextFiles = Object.create(null);
             for (const entry of this.workspaceFiles) {
                 if (entry.directory) continue;
-                const draft = this.files[entry.path];
+                const draft = workspaceDrafts[entry.path];
                 nextFiles[entry.path] = draft
-                    ? { ...draft, name: entry.path, isWorkspaceFile: true }
+                    ? { ...draft, name: entry.path, loaded: true, dirty: true, isWorkspaceFile: true }
                     : { name: entry.path, content: '', loaded: false, dirty: false, isWorkspaceFile: true };
             }
             this.files = nextFiles;
+            this.currentFile = null;
             const first = this.workspaceFiles.find((entry) => !entry.directory);
-            this.currentFile = first?.path || null;
-            if (!this.currentFile) this.createNewFile();
             const label = document.getElementById('workspaceLabel');
             if (label) label.textContent = this.workspaceName;
             this.renderFileTree();
             this.updateTabs();
             if (first) await this.switchFile(first.path);
+            else this.createNewFile();
             this.notify(`Opened workspace: ${this.workspaceName}`);
         } catch (error) {
             this.notify(`Could not open workspace: ${error.message}`);
@@ -372,11 +388,8 @@ class FileManager {
             } else if (this.desktop && file.token) {
                 await window.desktopApp.saveFile(file.token, content);
             } else if (this.desktop) {
-                const result = await window.desktopApp.saveFileAs(content);
-                if (!result) return;
-                file.token = result.token;
-                file.isWorkspaceFile = false;
-                file.name = result.name;
+                await this.saveAs();
+                return;
             } else {
                 this.downloadFile(this.currentFile, content);
             }
@@ -402,11 +415,20 @@ class FileManager {
         try {
             const result = await window.desktopApp.saveFileAs(file.content);
             if (!result) return;
-            file.token = result.token;
-            file.isWorkspaceFile = false;
-            file.dirty = false;
-            this.setStatus('Saved');
+            const name = this.uniqueName(result.name);
+            this.files[name] = {
+                name,
+                content: file.content,
+                loaded: true,
+                dirty: false,
+                isWorkspaceFile: false,
+                token: result.token
+            };
+            this.saveFiles();
             this.updateTabs();
+            this.renderFileTree();
+            await this.switchFile(name);
+            this.setStatus('Saved');
             this.notify(`Saved ${result.name}`);
         } catch (error) {
             this.notify(`Could not save file: ${error.message}`);

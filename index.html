@@ -23,12 +23,31 @@
                 </div>
             </div>
             <div class="dropdown">
+                <button class="menu-button" type="button">Edit</button>
+                <div class="dropdown-menu">
+                    <button data-action="undo" type="button">Undo <span>Ctrl+Z</span></button>
+                    <button data-action="redo" type="button">Redo <span>Ctrl+Y</span></button>
+                    <button data-action="cut" type="button">Cut</button>
+                    <button data-action="copy" type="button">Copy</button>
+                    <button data-action="paste" type="button">Paste</button>
+                    <button data-action="select-all" type="button">Select all</button>
+                </div>
+            </div>
+            <div class="dropdown">
                 <button class="menu-button" type="button">View</button>
                 <div class="dropdown-menu">
                     <button data-action="toggle-sidebar" type="button">Toggle explorer</button>
                     <button data-action="toggle-terminal" type="button">Toggle terminal</button>
                     <button data-action="focus-editor" type="button">Focus editor</button>
                     <button data-action="focus-terminal" type="button">Focus terminal</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">Build</button>
+                <div class="dropdown-menu">
+                    <button data-action="build-file" type="button">Build current file</button>
+                    <button data-action="build-workspace" type="button">Build workspace</button>
+                    <button data-action="run-file" type="button">Run current file</button>
                 </div>
             </div>
             <div class="dropdown">

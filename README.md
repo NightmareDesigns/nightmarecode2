@@ -1,6 +1,6 @@
 # 🩸 Nightmare Code
 
-A dark, aesthetic VS Code-inspired code editor with an animated Matrix-style background. Built with vanilla HTML, CSS, and JavaScript.
+A dark, aesthetic code editor with an animated Matrix-style background. The desktop app is built with Electron and vanilla HTML, CSS, and JavaScript.
 
 ## Features
 
@@ -8,9 +8,9 @@ A dark, aesthetic VS Code-inspired code editor with an animated Matrix-style bac
 - Clean, modern dark theme with neon-green accents
 - File explorer with file tree navigation
 - Multi-tab support for editing multiple files
-- Syntax highlighting support for Python, JavaScript, HTML, CSS, Shell, JSON, and Markdown
+- File type detection for common programming languages and configuration formats
 - Line numbers and code statistics in the status bar
-- Full-featured terminal panel (demo mode)
+- Safe demo terminal and Build menu (commands are suggestions only; they do not execute)
 
 🎬 **Animated Matrix Background**
 - Falling green code characters on dark background
@@ -22,7 +22,9 @@ A dark, aesthetic VS Code-inspired code editor with an animated Matrix-style bac
 💾 **File Management**
 - Create new files
 - Switch between open files via tabs or sidebar
-- Auto-save functionality (localStorage)
+- Draft recovery in browser `localStorage`
+- Open a workspace folder and read/save text files in the desktop app
+- Filter the workspace file list
 - File type detection and display
 
 ⌨️ **Keyboard Shortcuts**
@@ -41,13 +43,15 @@ git clone https://github.com/NightmareDesigns/nightmarecode2.git
 cd nightmarecode2
 ```
 
-2. Open `index.html` in your web browser:
-   - Simply double-click `index.html`, or
-   - Use a local server (recommended):
+2. Install dependencies and start the desktop app:
    ```bash
-   python -m http.server 8000
-   # Then navigate to http://localhost:8000
+   npm install
+   npm start
    ```
+
+   You can also open `index.html` in a browser for basic editing. Browser mode uses
+   local draft recovery and downloads saved files; workspace folder access is available
+   only in the Electron app.
 
 ### Usage
 
@@ -61,17 +65,18 @@ cd nightmarecode2
    - Type your code with syntax highlighting
 
 3. **Save Your Work**
-   - Click to save or use `Ctrl+S` / `Cmd+S`
-   - Files are auto-saved to browser's localStorage
+   - Use `Ctrl+S` / `Cmd+S` to save to the open workspace (desktop) or download the file (browser)
+   - Drafts are recovered from browser `localStorage`; desktop workspace changes are written to disk on explicit save
 
 4. **Customize the Background**
    - Adjust "Matrix Opacity" slider (0-100%)
    - Adjust "Animation Speed" slider (1x-10x)
    - Click "Pause Matrix" to stop/resume animation
 
-5. **Terminal**
-   - Type commands in the terminal input (demo mode)
-   - Available commands: `ls`, `echo`, `clear`, `help`, `pwd`, `date`
+5. **Terminal and Build menu**
+   - Type commands in the safe demo terminal
+   - Available commands: `ls`, `cat`, `lang`, `build`, `run`, `echo`, `clear`, `help`, `pwd`, `date`
+   - Build and run only show suggestions. They never launch programs or execute shell commands.
    - Click the terminal header to collapse/expand the panel
 
 ## File Structure
@@ -115,6 +120,24 @@ this.characters = '01ﾊﾐﾋｰｳﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒ�
 
 Extend the `getFileType()` method in `js/filemanager.js` to support more file types.
 
+## Platform Support
+
+- Windows desktop: portable x64 package
+- macOS desktop: DMG package
+- Linux desktop: AppImage package
+- Browser mode: recent desktop browsers; folder access depends on browser support and is currently not enabled
+- Android app development/building: not supported yet; Android SDK/Gradle integration or a remote build service is still needed
+
+Build packages on the corresponding operating system with `npm run dist`. Android is not an Electron desktop target.
+
+## Safety and Current Limitations
+
+- Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
+- The terminal is simulated. No build, run, plugin, or generated-code commands are executed.
+- There is no AI provider/agent, plugin marketplace, Language Server Protocol integration, debugger, real syntax highlighter, or decompiler yet.
+- A production plugin or AI-agent system needs provider/marketplace decisions, explicit permissions, command approval, and stronger process isolation before enabling execution.
+- Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
+
 ## Browser Compatibility
 
 - Chrome/Edge (latest)
@@ -136,19 +159,23 @@ Requires browser support for:
 
 ## Limitations
 
-- Files are stored in browser's localStorage (limited to ~5-10MB)
-- Terminal is in demo mode (no actual command execution)
-- No syntax highlighting engine (visual formatting only)
+- Browser mode has no direct workspace folder access
+- Terminal and Build menu are demo-only
+- No syntax highlighting engine yet
 - Single-window editing (no split view)
 
 ## Future Enhancements
 
-- [ ] Real syntax highlighting with highlight.js
+- [ ] Syntax highlighting, LSP diagnostics, autocomplete, formatters, and debugger support
 - [ ] Cloud storage integration
 - [ ] Theme customization UI
-- [ ] Search and replace functionality
+- [ ] Search and replace across workspace contents
 - [ ] Git integration
-- [ ] Plugin system
+- [ ] Permissioned plugin system and trusted marketplace support
+- [ ] Configurable local/cloud AI coding agent with reviewable diffs and checkpoints
+- [ ] Sandboxed build and run tools with explicit user approval
+- [ ] Android SDK and app build integration
+- [ ] Safe, format-scoped decompiler support
 - [ ] Split editor view
 - [ ] Actual terminal execution
 

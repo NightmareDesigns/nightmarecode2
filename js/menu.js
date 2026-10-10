@@ -40,40 +40,39 @@ class AppMenu {
     handleAction(action) {
         const editor = document.getElementById('codeEditor');
         const terminal = document.getElementById('terminalInput');
+        const manager = window.fileManager;
 
         switch (action) {
             case 'new-file':
-                if (window.fileManager) window.fileManager.createNewFile();
+                manager?.createNewFile();
                 break;
             case 'open-file':
-                if (window.fileManager) {
-                    const fileName = prompt('Enter file name:');
-                    if (fileName) {
-                        if (!window.fileManager.files[fileName]) {
-                            window.fileManager.files[fileName] = { name: fileName, content: '', type: 'text' };
-                            window.fileManager.saveFiles();
-                        }
-                        window.fileManager.switchFile(fileName);
-                    }
-                }
+                manager?.openFile();
+                break;
+            case 'open-workspace':
+                manager?.openWorkspace();
                 break;
             case 'save-file':
-                if (window.fileManager) window.fileManager.saveCurrentFile();
+                manager?.saveCurrentFile();
                 break;
             case 'save-as':
-                if (window.fileManager) {
-                    const newName = prompt('Save as:');
-                    if (newName) {
-                        const current = window.fileManager.currentFile;
-                        const active = editor ? editor.value : '';
-                        window.fileManager.files[newName] = { name: newName, content: active, type: 'text' };
-                        window.fileManager.currentFile = newName;
-                        window.fileManager.saveFiles();
-                        window.fileManager.updateEditor();
-                        window.fileManager.updateTabs();
-                        window.fileManager.renderFileTree();
-                    }
-                }
+                manager?.saveAs();
+                break;
+            case 'undo':
+                editor?.focus();
+                document.execCommand('undo');
+                break;
+            case 'redo':
+                editor?.focus();
+                document.execCommand('redo');
+                break;
+            case 'cut':
+                editor?.focus();
+                document.execCommand('cut');
+                break;
+            case 'select-all':
+                editor?.focus();
+                editor?.select();
                 break;
             case 'toggle-sidebar':
                 document.querySelector('.sidebar')?.classList.toggle('collapsed');
@@ -82,7 +81,7 @@ class AppMenu {
                 document.querySelector('.terminal-panel')?.classList.toggle('collapsed');
                 break;
             case 'copy':
-                if (editor) editor.select();
+                editor?.focus();
                 document.execCommand('copy');
                 break;
             case 'paste':
@@ -101,15 +100,13 @@ class AppMenu {
                 document.querySelector('.settings-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 break;
             case 'run-file':
-                if (window.fileManager && window.fileManager.currentFile) {
-                    const file = window.fileManager.currentFile;
-                    const ext = file.split('.').pop()?.toLowerCase();
-                    const runText = `Run command for ${file}: ${ext === 'py' ? 'python3 ' + file : 'node ' + file}`;
-                    console.log(runText);
-                    if (window.editorInstance && typeof window.editorInstance.processTerminalCommand === 'function') {
-                        window.editorInstance.processTerminalCommand(`run ${file}`);
-                    }
-                }
+                this.runDemoCommand(`run ${manager?.currentFile || ''}`);
+                break;
+            case 'build-file':
+                this.runDemoCommand(`build ${manager?.currentFile || ''}`.trim());
+                break;
+            case 'build-workspace':
+                this.runDemoCommand('build workspace');
                 break;
             case 'run-terminal':
                 document.querySelector('.terminal-panel')?.classList.remove('collapsed');
@@ -125,6 +122,13 @@ class AppMenu {
                 break;
             default:
                 break;
+        }
+    }
+
+    runDemoCommand(command) {
+        document.querySelector('.terminal-panel')?.classList.remove('collapsed');
+        if (window.editorInstance && typeof window.editorInstance.processTerminalCommand === 'function') {
+            window.editorInstance.processTerminalCommand(command);
         }
     }
 }

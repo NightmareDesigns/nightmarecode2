@@ -44,6 +44,17 @@
         }
       ],
       "artifactName": "NightmareDesignsCode-${version}-portable.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
     }
   }
 }

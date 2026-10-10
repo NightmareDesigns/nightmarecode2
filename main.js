@@ -1,7 +1,8 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
-const { randomUUID } = require('crypto');
+const { createHash, randomUUID } = require('crypto');
+const { pathToFileURL } = require('url');
 
 const MAX_TEXT_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_WORKSPACE_ENTRIES = 10000;
@@ -27,7 +28,8 @@ function resolveWorkspaceFile(relativePath) {
   }
 
   const absolutePath = path.resolve(workspaceRoot, normalized);
-  if (!absolutePath.startsWith(`${workspaceRoot}${path.sep}`)) {
+  const relativeToRoot = path.relative(workspaceRoot, absolutePath);
+  if (!relativeToRoot || relativeToRoot === '..' || relativeToRoot.startsWith(`..${path.sep}`) || path.isAbsolute(relativeToRoot)) {
     throw new Error('File is outside the workspace.');
   }
   return absolutePath;
@@ -62,9 +64,10 @@ ipcMain.handle('workspace:open', async (event) => {
   });
   if (result.canceled || result.filePaths.length === 0) return null;
 
-  workspaceRoot = result.filePaths[0];
+  workspaceRoot = await fs.realpath(result.filePaths[0]);
   return {
     name: path.basename(workspaceRoot),
+    id: createHash('sha256').update(workspaceRoot).digest('hex'),
     files: await listWorkspaceFiles()
   };
 });
@@ -141,6 +144,8 @@ ipcMain.handle('file:save', async (event, token, content) => {
   if (typeof content !== 'string' || Buffer.byteLength(content, 'utf8') > MAX_TEXT_FILE_SIZE) {
     throw new Error('Text files must be smaller than 2 MB.');
   }
+  const stats = await fs.lstat(filePath);
+  if (stats.isSymbolicLink() || !stats.isFile()) throw new Error('The selected file is no longer a regular file.');
   await fs.writeFile(filePath, content, 'utf8');
   return true;
 });
@@ -161,8 +166,9 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const appUrl = pathToFileURL(path.join(__dirname, 'index.html')).href;
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url !== `file://${path.join(__dirname, 'index.html')}`) event.preventDefault();
+    if (url !== appUrl) event.preventDefault();
   });
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
