@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+def editorRoot = rootProject.projectDir.parentFile
+def generatedEditorAssets = layout.buildDirectory.dir('generated/editorAssets')
+
+android {
+    namespace 'com.nightmaredesigns.nightmarecode2'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.nightmaredesigns.nightmarecode2'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    sourceSets {
+        main.assets.srcDir(generatedEditorAssets)
+    }
+}
+
+tasks.register('copyEditorAssets', Sync) {
+    from(editorRoot) {
+        include 'index.html'
+        include 'css/**'
+        include 'js/**'
+        include 'vendor/**'
+    }
+    into(generatedEditorAssets)
+}
+
+tasks.named('preBuild').configure {
+    dependsOn(tasks.named('copyEditorAssets'))
+}
