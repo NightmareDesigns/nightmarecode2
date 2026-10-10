@@ -14,7 +14,7 @@ class LocalExtensions {
             const packs = JSON.parse(localStorage.getItem('nightmare_extension_packs') || '[]');
             return Array.isArray(packs)
                 ? packs.filter((pack) => this.validatePack(pack)).map((pack) => ({
-                    ...pack,
+                    ...this.normalizePack(pack),
                     id: typeof pack.id === 'string' ? pack.id : `${Date.now()}-${Math.random().toString(36).slice(2)}`
                 }))
                 : [];
@@ -37,6 +37,20 @@ class LocalExtensions {
         );
     }
 
+    normalizePack(pack) {
+        return {
+            schemaVersion: 1,
+            name: pack.name.trim(),
+            version: pack.version,
+            description: pack.description,
+            snippets: pack.snippets.map((snippet) => ({
+                name: snippet.name.trim(),
+                language: snippet.language,
+                body: snippet.body
+            }))
+        };
+    }
+
     async importPack(event) {
         const input = event.currentTarget;
         const file = input.files?.[0];
@@ -47,9 +61,9 @@ class LocalExtensions {
             return;
         }
         try {
-            const pack = JSON.parse(await file.text());
-            if (!this.validatePack(pack)) throw new Error('This file does not match the supported snippet-pack format.');
-            pack.name = pack.name.trim();
+            const sourcePack = JSON.parse(await file.text());
+            if (!this.validatePack(sourcePack)) throw new Error('This file does not match the supported snippet-pack format.');
+            const pack = this.normalizePack(sourcePack);
             if (this.packs.some((existing) => existing.name.toLowerCase() === pack.name.toLowerCase())) {
                 throw new Error('A snippet pack with this name is already imported.');
             }

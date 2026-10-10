@@ -1,6 +1,5 @@
 class AppMenu {
     constructor() {
-        this.currentAction = null;
         this.init();
     }
 
