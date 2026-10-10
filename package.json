@@ -1,0 +1,49 @@
+{
+  "name": "nightmarecode2",
+  "version": "0.1.0",
+  "description": "Nightmare Designs Code - dark code editor with Matrix aesthetic",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --dir",
+    "dist": "electron-builder",
+    "package": "electron-builder --win portable"
+  },
+  "keywords": [
+    "editor",
+    "desktop",
+    "matrix",
+    "code"
+  ],
+  "author": "NightmareDesigns",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "build": {
+    "appId": "com.nightmaredesigns.nightmarecode2",
+    "productName": "Nightmare Designs Code",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/.git/**",
+      "!**/dist/**",
+      "!**/node_modules/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "NightmareDesignsCode-${version}-portable.exe"
+    }
+  }
+}
