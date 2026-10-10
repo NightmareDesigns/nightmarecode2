@@ -10,7 +10,7 @@ if errorlevel 1 (
 
 where npm >nul 2>nul
 if errorlevel 1 (
-    echo ERROR: Install Node.js 18 or later and add npm to PATH.
+    echo ERROR: Install Node.js 20 or later and add npm to PATH.
     exit /b 1
 )
 
