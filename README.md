@@ -11,6 +11,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - File type detection for common programming languages and configuration formats
 - Line numbers and code statistics in the status bar
 - Safe demo terminal and Build menu (commands are suggestions only; they do not execute)
+- Voice menu for speech-to-text dictation, safe built-in editor commands, and read-aloud
 
 🎬 **Animated Matrix Background**
 - Falling green code characters on dark background
@@ -57,8 +58,8 @@ cd nightmarecode2
 
 - **Windows portable EXE:** `npm run package`.
   Produces `dist/NightmareDesignsCode-0.1.0-portable.exe` (x64, no installer required).
-- **macOS DMG / Linux AppImage:** `npm run dist` on the corresponding operating system.
-- **Android debug APK:** `./android/gradlew -p android assembleDebug` (macOS/Linux) or
+- **Linux AppImage:** `npm run dist` on Linux.
+- **Android debug APK:** `./android/gradlew -p android assembleDebug` (Linux) or
   `android\gradlew.bat -p android assembleDebug` (Windows). The APK is written to
   `android/app/build/outputs/apk/debug/app-debug.apk`.
 
@@ -93,6 +94,11 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - Available commands: `ls`, `cat`, `lang`, `build`, `run`, `echo`, `clear`, `help`, `pwd`, `date`
    - Build and run only show suggestions. They never launch programs or execute shell commands.
    - Click the terminal header to collapse/expand the panel
+
+6. **Voice**
+   - Use the Voice menu to dictate into the editor, say built-in editor commands, or read the current file/selection aloud.
+   - Microphone permission is requested only when starting dictation or voice commands.
+   - Speech recognition depends on the browser/platform provider and may send audio to a remote service; read-aloud uses the device's speech voices.
 
 ## File Structure
 
@@ -139,7 +145,6 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 ## Platform Support
 
 - Windows desktop: standalone portable x64 EXE
-- macOS desktop: DMG package
 - Linux desktop: AppImage package
 - Android: installable APK with file picker and Save dialog
 - Browser mode: recent desktop browsers; folder access depends on browser support and is currently not enabled
@@ -148,14 +153,17 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 
 The APK has not been tested on physical Samsung DeX or XREAL hardware. Display output depends on the phone, adapter, and glasses supporting the required USB-C DisplayPort path.
 
-Build Electron packages on the corresponding operating system with `npm run dist`. Android is a separate native WebView wrapper, not an Electron target.
+Windows and Linux Electron packages can be built with `npm run package` and `npm run dist`, respectively. Android is a separate native WebView wrapper, not an Electron target.
+
+The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android APK on matching hosted runners and uploads them as downloadable artifacts.
 
 ## Safety and Current Limitations
 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
 - The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
 - The terminal is simulated. No build, run, plugin, or generated-code commands are executed.
-- There is no AI provider/agent, plugin marketplace, Language Server Protocol integration, debugger, real syntax highlighter, or decompiler yet.
+- Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
+- There is no local/remote AI coding agent or API client, plugin marketplace, Language Server Protocol integration, debugger, real syntax highlighter, or decompiler yet.
 - A production plugin or AI-agent system needs provider/marketplace decisions, explicit permissions, command approval, and stronger process isolation before enabling execution.
 - Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
 
