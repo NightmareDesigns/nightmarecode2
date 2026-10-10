@@ -64,7 +64,11 @@ npm run build
 
 The Android app packages the same editor, file manager, menus, Matrix animation, theme settings, and demo terminal as the desktop version. It adapts to display resizing and touch, keyboard, and mouse input for XREAL glasses and Samsung DeX. The terminal remains demo-only on both desktop and Android.
 
-Install the dependencies and Android SDK, then build a debug APK:
+On Windows, run `build-android.bat`. It checks for Java and the Android SDK, installs the required Android SDK packages when `sdkmanager` is available (prompting you to accept Android SDK licenses), installs the locked npm dependencies, builds the APK, and copies it to `dist/NightmareDesignsCode-debug.apk`.
+
+Requirements: Node.js 18 or later, Java 17, and Android SDK Command-line Tools (or Android Platform 35 and Build Tools 35.0.0 already installed). The build downloads the Gradle wrapper and Android dependencies as needed; Google Maven or the configured SciJava fallback must be reachable.
+
+For Linux or macOS, install the dependencies and Android SDK, then run:
 
 ```bash
 npm install
