@@ -25,12 +25,19 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 320px;
+    height: 100vh;
     min-height: 0;
     overflow: hidden;
     color: var(--text-color);
     background: var(--dark-bg);
     font-family: 'Courier New', monospace;
     -webkit-text-size-adjust: 100%;
+}
+
+@supports (height: 100dvh) {
+    body {
+        height: 100dvh;
+    }
 }
 
 button,

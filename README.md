@@ -49,6 +49,17 @@ cd nightmarecode2
    # Then navigate to http://localhost:8000
    ```
 
+### Build the desktop app
+
+Install the dependencies and build the unpacked application for the current host platform:
+
+```bash
+npm install
+npm run build
+```
+
+`npm run dist` creates the configured distributable; the Windows portable package can be built with `npm run package`.
+
 ### Usage
 
 1. **Create a New File**
@@ -121,6 +132,12 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 - Firefox (latest)
 - Safari (latest)
 - Opera (latest)
+
+### XREAL and Samsung DeX
+
+The browser version adapts to external-display sizes and supports touch, keyboard, and mouse input, so it can be used from an Android browser while connected to XREAL glasses or in Samsung DeX. Serve the project over HTTP (for example, with the local server above) or use a hosted copy, then open it in the device's browser. The layout follows the available viewport and does not depend on device-specific user-agent detection.
+
+The Electron build is a desktop application, not an Android APK; Android installation and native DeX integration are not included.
 
 Requires browser support for:
 - Canvas API

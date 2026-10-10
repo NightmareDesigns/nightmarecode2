@@ -129,7 +129,10 @@ class NightmareCodeEditor {
 
         const line = document.createElement('div');
         line.className = 'terminal-line';
-        line.innerHTML = `<span class="prompt">$</span> ${normalized}`;
+        const prompt = document.createElement('span');
+        prompt.className = 'prompt';
+        prompt.textContent = '$';
+        line.append(prompt, document.createTextNode(` ${normalized}`));
         terminal.appendChild(line);
 
         const args = normalized.split(' ');
@@ -250,8 +253,8 @@ class NightmareCodeEditor {
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        new NightmareCodeEditor();
+        window.editorInstance = new NightmareCodeEditor();
     });
 } else {
-    new NightmareCodeEditor();
+    window.editorInstance = new NightmareCodeEditor();
 }

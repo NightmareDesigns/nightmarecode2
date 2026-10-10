@@ -153,10 +153,13 @@ class FileManager {
             const fileItem = document.createElement('div');
             fileItem.className = `file-item ${fileName === this.currentFile ? 'active' : ''}`;
             fileItem.dataset.file = fileName;
-            fileItem.innerHTML = `
-                <span class="file-icon">📄</span>
-                <span class="file-name">${fileName}</span>
-            `;
+            const icon = document.createElement('span');
+            icon.className = 'file-icon';
+            icon.textContent = '📄';
+            const name = document.createElement('span');
+            name.className = 'file-name';
+            name.textContent = fileName;
+            fileItem.append(icon, name);
             fileItem.addEventListener('click', () => this.switchFile(fileName));
             fileTree.appendChild(fileItem);
         });
@@ -171,17 +174,23 @@ class FileManager {
             const tab = document.createElement('div');
             tab.className = `tab ${fileName === this.currentFile ? 'active' : ''}`;
             tab.dataset.file = fileName;
-            tab.innerHTML = `
-                <span class="tab-name">${fileName}</span>
-                <button class="tab-close" data-file="${fileName}">×</button>
-            `;
+            const name = document.createElement('span');
+            name.className = 'tab-name';
+            name.textContent = fileName;
+            const closeButton = document.createElement('button');
+            closeButton.className = 'tab-close';
+            closeButton.type = 'button';
+            closeButton.dataset.file = fileName;
+            closeButton.setAttribute('aria-label', `Close ${fileName}`);
+            closeButton.textContent = '×';
 
-            tab.querySelector('.tab-name').addEventListener('click', () => this.switchFile(fileName));
-            tab.querySelector('.tab-close').addEventListener('click', (e) => {
+            name.addEventListener('click', () => this.switchFile(fileName));
+            closeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.deleteFile(fileName);
             });
 
+            tab.append(name, closeButton);
             tabContainer.appendChild(tab);
         });
     }
@@ -248,3 +257,4 @@ class FileManager {
 
 // Initialize File Manager
 const fileManager = new FileManager();
+window.fileManager = fileManager;
