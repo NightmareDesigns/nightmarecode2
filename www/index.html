@@ -25,8 +25,12 @@
             <div class="dropdown">
                 <button class="menu-button" type="button">Edit</button>
                 <div class="dropdown-menu">
+                    <button type="button" data-action="cut">Cut</button>
                     <button type="button" data-action="copy">Copy</button>
                     <button type="button" data-action="paste">Paste</button>
+                    <button type="button" data-action="undo">Undo</button>
+                    <button type="button" data-action="redo">Redo</button>
+                    <button type="button" data-action="select-all">Select All</button>
                 </div>
             </div>
             <div class="dropdown">
@@ -116,6 +120,7 @@
                 <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
                 <textarea id="codeEditor" class="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Code editor" placeholder="// Start coding in Nightmare Designs Code..."></textarea>
             </div>
+            <input id="openFileInput" type="file" hidden aria-label="Choose a file to open">
             <section class="terminal-panel" aria-label="Terminal">
                 <div class="terminal-header">
                     <span>Terminal</span>

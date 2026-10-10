@@ -2,6 +2,7 @@ class FileManager {
     constructor() {
         this.files = this.loadFiles();
         this.currentFile = this.getInitialFile();
+        this.fileHandles = new Map();
         this.init();
     }
 
@@ -66,6 +67,55 @@ class FileManager {
         this.updateEditor();
         this.updateTabs();
         this.renderFileTree();
+    }
+
+    async importFile(file) {
+        if (!file || !file.name) return;
+
+        try {
+            const content = await file.text();
+            this.openFileContent(file.name, content);
+        } catch (error) {
+            alert(`Could not open ${file.name}: ${error.message}`);
+        }
+    }
+
+    openFileContent(fileName, content, fileId = null) {
+        if (Object.prototype.hasOwnProperty.call(this.files, fileName)) {
+            this.files[fileName].content = content;
+        } else {
+            this.files[fileName] = { name: fileName, content, type: 'text' };
+        }
+
+        if (fileId) this.fileHandles.set(fileName, fileId);
+        this.saveFiles();
+        this.currentFile = fileName;
+        this.updateEditor();
+        this.updateTabs();
+        this.renderFileTree();
+    }
+
+    setCurrentFileHandle(fileName, fileId) {
+        if (fileId) this.fileHandles.set(fileName, fileId);
+    }
+
+    getCurrentContent() {
+        const editor = document.getElementById('codeEditor');
+        if (editor && this.currentFile && this.files[this.currentFile]) {
+            this.files[this.currentFile].content = editor.value;
+        }
+        this.saveFiles();
+        return this.currentFile ? this.files[this.currentFile]?.content || '' : '';
+    }
+
+    downloadFile(fileName, content) {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName || 'untitled.txt';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     updateEditor() {
@@ -203,16 +253,7 @@ class FileManager {
 
         const openFileBtn = document.getElementById('openFileBtn');
         if (openFileBtn) {
-            openFileBtn.addEventListener('click', () => {
-                const fileName = prompt('Enter file name:');
-                if (!fileName) return;
-
-                if (!this.files[fileName]) {
-                    this.files[fileName] = { name: fileName, content: '', type: 'text' };
-                    this.saveFiles();
-                }
-                this.switchFile(fileName);
-            });
+            openFileBtn.addEventListener('click', () => window.appMenu?.openFile());
         }
 
         const editor = document.getElementById('codeEditor');

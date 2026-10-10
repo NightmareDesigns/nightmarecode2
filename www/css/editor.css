@@ -394,6 +394,29 @@ button {
     text-overflow: ellipsis;
 }
 
+.app-notification {
+    position: fixed;
+    z-index: 200;
+    right: 16px;
+    bottom: 46px;
+    max-width: min(90vw, 420px);
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    background: var(--dark-bg-tertiary);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.app-notification.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 @media (max-width: 800px) {
     .sidebar {
         position: absolute;

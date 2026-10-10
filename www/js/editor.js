@@ -103,12 +103,20 @@ class NightmareCodeEditor {
     }
 
     saveFile() {
+        if (window.appMenu) {
+            window.appMenu.saveFile();
+            return;
+        }
         if (!window.fileManager) return;
         fileManager.saveCurrentFile();
         this.showNotification('File saved: ' + fileManager.currentFile);
     }
 
     openFileDialog() {
+        if (window.appMenu) {
+            window.appMenu.openFile();
+            return;
+        }
         if (!window.fileManager) return;
         const fileName = prompt('Enter file name:');
         if (fileName) {
@@ -238,7 +246,19 @@ class NightmareCodeEditor {
     }
 
     showNotification(message) {
-        console.log('🩸 Nightmare Code: ' + message);
+        let notification = document.getElementById('appNotification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'appNotification';
+            notification.className = 'app-notification';
+            notification.setAttribute('role', 'status');
+            document.body.appendChild(notification);
+        }
+
+        notification.textContent = message;
+        notification.classList.add('visible');
+        clearTimeout(this.notificationTimeout);
+        this.notificationTimeout = setTimeout(() => notification.classList.remove('visible'), 2400);
     }
 
     updateInitialState() {
