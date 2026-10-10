@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Display;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -120,6 +122,25 @@ public class MainActivity extends Activity {
         webView.loadUrl("https://" + APP_HOST + "/assets/index.html");
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.post(() -> webView.evaluateJavascript(
+                    "window.editorInstance && window.editorInstance.syncExternalDisplayMode("
+                            + isExternalDisplay() + ")",
+                    null
+            ));
+        }
+    }
+
+    private boolean isExternalDisplay() {
+        Display display = getWindowManager().getDefaultDisplay();
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        Display primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        return display != null && primaryDisplay != null && display.getDisplayId() != primaryDisplay.getDisplayId();
+    }
+
     private boolean isAppAsset(Uri uri) {
         return "https".equals(uri.getScheme())
                 && APP_HOST.equals(uri.getHost())
@@ -213,6 +234,11 @@ public class MainActivity extends Activity {
     }
 
     private final class AndroidBridge {
+        @JavascriptInterface
+        public boolean isExternalDisplay() {
+            return MainActivity.this.isExternalDisplay();
+        }
+
         @JavascriptInterface
         public void saveTextFile(String fileName, String content, int requestId) {
             if (content == null || content.getBytes(StandardCharsets.UTF_8).length > MAX_TEXT_FILE_BYTES) {

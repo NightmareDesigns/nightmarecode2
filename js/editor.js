@@ -17,6 +17,8 @@ class NightmareCodeEditor {
         this.voiceMode = null;
         this.voiceStopRequested = false;
         this.voicePrivacyNotified = false;
+        this.glassesModeManuallySet = false;
+        this.externalDisplayActive = Boolean(window.androidApp?.isExternalDisplay());
         this.init();
     }
 
@@ -36,6 +38,7 @@ class NightmareCodeEditor {
         document.getElementById('browserFileInput')?.addEventListener('change', (event) => this.openBrowserFile(event));
         document.addEventListener('keydown', (event) => this.handleShortcuts(event));
         window.editorInstance = this;
+        this.syncExternalDisplayMode(this.externalDisplayActive);
     }
 
     handleShortcuts(event) {
@@ -358,6 +361,26 @@ class NightmareCodeEditor {
 
     stopSpeaking() {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    syncExternalDisplayMode(isExternalDisplay) {
+        this.externalDisplayActive = Boolean(isExternalDisplay);
+        if (!this.glassesModeManuallySet) this.applyGlassesMode(this.externalDisplayActive);
+    }
+
+    toggleGlassesMode() {
+        this.glassesModeManuallySet = true;
+        this.applyGlassesMode(!document.body.classList.contains('glasses-mode'));
+    }
+
+    applyGlassesMode(enabled) {
+        document.body.classList.toggle('glasses-mode', enabled);
+        const status = document.getElementById('displayModeStatus');
+        if (status) {
+            status.textContent = enabled
+                ? (this.externalDisplayActive ? 'External display mode' : 'Glasses mode')
+                : 'Standard display';
+        }
     }
 
     showNotification(message) {

@@ -96,6 +96,9 @@ class AppMenu {
             case 'focus-terminal':
                 terminal?.focus();
                 break;
+            case 'toggle-glasses-mode':
+                window.editorInstance?.toggleGlassesMode();
+                break;
             case 'toggle-theme-panel':
                 document.querySelector('.settings-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 break;

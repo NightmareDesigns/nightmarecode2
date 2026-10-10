@@ -225,6 +225,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .notification.visible { opacity: 1; transform: translateY(0); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
+body.glasses-mode #matrixCanvas { display: none; }
+body.glasses-mode .app-menu { background: #050707; }
+body.glasses-mode .workbench { background: #050707; }
+body.glasses-mode .sidebar { background: #090d0b; }
+body.glasses-mode #codeEditor { color: #effff1; font-size: 17px; }
+body.glasses-mode .line-numbers { color: #9aafa0; font-size: 17px; }
+body.glasses-mode .terminal-panel { background: #050707; }
+body.glasses-mode .status-bar { color: #d7e7da; }
+
 @media (max-width: 680px) {
     .app-menu { gap: 6px; padding: 0 7px; }
     .brand { flex: 0 0 auto; font-size: 0; }
@@ -236,4 +245,5 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     .terminal-heading span:last-child { display: none; }
     .status-bar { gap: 8px; font-size: 9px; }
     #voiceStatus { display: none; }
+    #displayModeStatus { display: none; }
 }

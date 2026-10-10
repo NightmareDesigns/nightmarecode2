@@ -149,9 +149,9 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 - Android: installable APK with file picker and Save dialog
 - Browser mode: recent desktop browsers; folder access depends on browser support and is currently not enabled
 - Samsung DeX: the Android activity is resizable for DeX windowed use and physical keyboard input
-- XREAL glasses: the APK is a regular 2D Android app and can be shown when the connected phone/DeX setup routes its display to the glasses; there is no XREAL spatial SDK integration
+- XREAL glasses: the APK supports regular 2D external-display use; secondary Android displays automatically enable high-contrast glasses mode, which can also be toggled from View
 
-The APK has not been tested on physical Samsung DeX or XREAL hardware. Display output depends on the phone, adapter, and glasses supporting the required USB-C DisplayPort path.
+This is a standard Android APK, not an XREAL spatial SDK app. Mirroring is controlled by Android/DeX and cannot be detected independently; automatic glasses mode activates when Android launches the app on a separate external display. The APK still needs physical Samsung DeX/XREAL testing. Display output depends on the phone, adapter, and glasses supporting the required USB-C DisplayPort path.
 
 Windows and Linux Electron packages can be built with `npm run package` and `npm run dist`, respectively. Android is a separate native WebView wrapper, not an Electron target.
 
