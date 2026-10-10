@@ -118,6 +118,9 @@ class FileManager {
 
     async switchFile(fileName) {
         if (!this.files[fileName]) return;
+        if (this.currentFile === fileName) return;
+        const requestId = (this.switchRequest || 0) + 1;
+        this.switchRequest = requestId;
         this.captureCurrentContent();
         this.saveFiles();
         this.currentFile = fileName;
@@ -129,11 +132,13 @@ class FileManager {
                 file.dirty = false;
                 this.saveFiles();
             } catch (error) {
+                if (this.switchRequest !== requestId) return;
                 this.notify(`Could not open ${fileName}: ${error.message}`);
                 this.setStatus('Open failed', true);
                 return;
             }
         }
+        if (this.switchRequest !== requestId) return;
         this.updateEditor();
         this.updateTabs();
         this.renderFileTree();
@@ -186,12 +191,30 @@ class FileManager {
         if (this.files[fileName].dirty && !confirm(`Close ${fileName} and discard its unsaved editor changes?`)) return;
         delete this.files[fileName];
         if (this.currentFile === fileName) {
-            this.currentFile = Object.keys(this.files)[0] || null;
-            if (!this.currentFile) {
-                this.files['untitled.txt'] = { name: 'untitled.txt', content: '', loaded: true, dirty: false };
-                this.currentFile = 'untitled.txt';
+            const nextFile = Object.keys(this.files)[0] || this.workspaceFiles.find((entry) => !entry.directory)?.path;
+            if (nextFile && !this.files[nextFile]) {
+                this.files[nextFile] = {
+                    name: nextFile,
+                    content: '',
+                    loaded: false,
+                    dirty: false,
+                    isWorkspaceFile: true
+                };
             }
-            this.updateEditor();
+            if (!nextFile) {
+                this.files['untitled.txt'] = {
+                    name: 'untitled.txt',
+                    content: '',
+                    loaded: true,
+                    dirty: false,
+                    isWorkspaceFile: Boolean(this.workspaceName)
+                };
+                this.currentFile = 'untitled.txt';
+                this.updateEditor();
+            } else {
+                this.currentFile = null;
+                this.switchFile(nextFile);
+            }
         }
         this.saveFiles();
         this.renderFileTree();
@@ -222,7 +245,18 @@ class FileManager {
             item.append(icon, label);
             if (!entry.directory) {
                 item.title = entry.path;
-                item.addEventListener('click', () => this.switchFile(entry.path));
+                item.addEventListener('click', () => {
+                    if (!this.files[entry.path]) {
+                        this.files[entry.path] = {
+                            name: entry.path,
+                            content: '',
+                            loaded: false,
+                            dirty: false,
+                            isWorkspaceFile: true
+                        };
+                    }
+                    this.switchFile(entry.path);
+                });
             }
             fileTree.appendChild(item);
         }
@@ -291,15 +325,6 @@ class FileManager {
         });
         editor.addEventListener('click', () => this.updateStatusBar());
         editor.addEventListener('keyup', () => this.updateStatusBar());
-        editor.addEventListener('keydown', (event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-                event.preventDefault();
-                this.saveCurrentFile();
-            } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
-                event.preventDefault();
-                this.createNewFile();
-            }
-        });
     }
 
     async openWorkspace() {
