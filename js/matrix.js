@@ -168,11 +168,11 @@ class MatrixBackground {
     applyTheme() {
         const root = document.documentElement;
         root.style.setProperty('--dark-bg', this.theme.backgroundColor);
-        root.style.setProperty('--dark-bg-secondary', this.theme.backgroundColor);
-        root.style.setProperty('--dark-bg-tertiary', '#0d0d0d');
+        root.style.setProperty('--dark-bg-secondary', '#252526');
+        root.style.setProperty('--dark-bg-tertiary', '#2d2d30');
         root.style.setProperty('--border-color', this.theme.frameColor);
         root.style.setProperty('--text-color', this.theme.textColor);
-        root.style.setProperty('--primary-color', this.theme.textColor);
+        root.style.setProperty('--primary-color', this.theme.frameColor);
         root.style.setProperty('--matrix-color', this.theme.matrixColor);
         root.style.setProperty('--panel-opacity', (this.theme.panelOpacity / 100).toString());
     }

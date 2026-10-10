@@ -5,7 +5,8 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 ## Features
 
 ✨ **Editor Interface**
-- Clean, modern dark theme with neon-green accents
+- VS Code-inspired dark IDE layout with an activity bar, searchable Explorer, editor tabs and breadcrumbs, and a resizable Terminal/AI panel
+- Blue-accented dark theme with a subtle, adjustable Matrix background
 - File explorer with file tree navigation
 - Multi-tab support for editing multiple files
 - File type detection for common programming languages and configuration formats
@@ -17,7 +18,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - Voice menu for speech-to-text dictation, built-in editor commands, and read-aloud
 
 🎬 **Animated Matrix Background**
-- Falling green code characters on dark background
+- Falling code characters on a dark editor background
 - Adjustable opacity slider (0-100%)
 - Adjustable animation speed (1x-10x)
 - Pause/Resume functionality
@@ -186,7 +187,7 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
 - The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
 - Guided Build/Run accepts JavaScript and Python workspace files; Decompile supports `.exe`, `.dll`, `.class`, `.jar`, and `.wasm` in the Windows/Linux x64 Electron desktop app.
-- The unrestricted terminal is available only in the Windows/Linux desktop app. It is off by default on every launch and requires enabling its checkbox plus confirming a warning; commands run as your account, are not sandboxed, and can access files outside the workspace, the network, or other programs. Unchecking it, changing workspaces, or closing the app terminates the shell. Interactive full-screen programs that require a TTY are not supported.
+- The unrestricted terminal is available only in the x64 Windows/Linux desktop app. In browser/Android mode, its checkbox is disabled; use the desktop app instead. In desktop mode, open a workspace, check the terminal option, and confirm the warning. It is off by default on every launch; commands run as your account, are not sandboxed, and can access files outside the workspace, the network, or other programs. Unchecking it, changing workspaces, or closing the app terminates the shell. Interactive full-screen programs that require a TTY are not supported.
 - Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
 - The AI assistant makes one model request at a time; workspace edits are constrained to explicitly selected, listed paths and are not an autonomous shell/tool agent. Local model-server availability depends on installing/configuring that server separately.
