@@ -22,6 +22,8 @@ class NightmareCodeEditor {
         document.getElementById('browserFileInput')?.addEventListener('change', (event) => this.openBrowserFile(event));
         document.getElementById('toolsTerminalTab')?.addEventListener('click', () => this.showToolsView('terminal'));
         document.getElementById('toolsAiTab')?.addEventListener('click', () => this.showToolsView('ai'));
+        document.getElementById('unrestrictedTerminalToggle')?.addEventListener('change', (event) => this.toggleUnrestrictedTerminal(event));
+        document.getElementById('terminalCommandForm')?.addEventListener('submit', (event) => this.submitTerminalCommand(event));
         document.getElementById('aiSendBtn')?.addEventListener('click', () => this.askAI());
         document.getElementById('aiInsertBtn')?.addEventListener('click', () => this.applyAIResponse(false));
         document.getElementById('aiReplaceBtn')?.addEventListener('click', () => this.applyAIResponse(true));
@@ -33,6 +35,14 @@ class NightmareCodeEditor {
             const message = progress?.status;
             if (typeof message === 'string') window.fileManager?.setStatus(message);
         });
+        window.desktopApp?.onTerminalOutput?.((result) => {
+            if (typeof result?.enabled === 'boolean') this.setUnrestrictedTerminalUI(result.enabled);
+            if (typeof result?.text === 'string') this.appendTerminalMessage(result.text);
+        });
+        if (!window.desktopApp?.setUnrestrictedTerminalEnabled) {
+            const toggle = document.getElementById('unrestrictedTerminalToggle');
+            if (toggle) toggle.disabled = true;
+        }
         document.addEventListener('keydown', (event) => this.handleShortcuts(event));
         window.addEventListener('resize', () => this.refreshExternalDisplayMode());
         window.editorInstance = this;
@@ -107,6 +117,56 @@ class NightmareCodeEditor {
                 this.appendTerminalMessage('Use Build or Run from the top menu. Arbitrary shell commands are not accepted.');
                 return;
         }
+    }
+
+    async toggleUnrestrictedTerminal(event) {
+        const toggle = event.currentTarget;
+        const requested = toggle.checked;
+        toggle.disabled = true;
+        try {
+            if (!window.desktopApp?.setUnrestrictedTerminalEnabled) {
+                throw new Error('The unrestricted terminal is only available in the desktop app.');
+            }
+            const enabled = await window.desktopApp.setUnrestrictedTerminalEnabled(requested);
+            this.setUnrestrictedTerminalUI(enabled);
+        } catch (error) {
+            this.setUnrestrictedTerminalUI(false);
+            this.appendTerminalMessage(`Could not change terminal access: ${error.message}`);
+        } finally {
+            toggle.disabled = false;
+        }
+    }
+
+    setUnrestrictedTerminalUI(enabled) {
+        const toggle = document.getElementById('unrestrictedTerminalToggle');
+        const input = document.getElementById('terminalCommand');
+        const submit = document.getElementById('terminalCommandSubmit');
+        if (toggle) toggle.checked = enabled;
+        if (input) {
+            input.disabled = !enabled;
+            input.placeholder = enabled ? 'Enter a shell command' : 'Enable terminal to enter commands';
+        }
+        if (submit) submit.disabled = !enabled;
+    }
+
+    async submitTerminalCommand(event) {
+        event.preventDefault();
+        const input = document.getElementById('terminalCommand');
+        const command = input?.value || '';
+        if (!command.trim()) return;
+        if (!document.getElementById('unrestrictedTerminalToggle')?.checked ||
+            !window.desktopApp?.writeTerminalCommand) {
+            this.appendTerminalMessage('Enable the unrestricted terminal checkbox first.');
+            return;
+        }
+        this.appendTerminalMessage(`$ ${command}`);
+        input.value = '';
+        try {
+            await window.desktopApp.writeTerminalCommand(command);
+        } catch (error) {
+            this.appendTerminalMessage(`Terminal command failed: ${error.message}`);
+        }
+        input.focus();
     }
 
     showToolsView(view) {

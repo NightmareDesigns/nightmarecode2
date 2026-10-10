@@ -256,6 +256,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .terminal-heading .quiet-button { padding: 4px 8px; }
 .terminal-heading .active-tool-tab { color: var(--primary-color); border-color: var(--border-color); }
 .terminal-notice { padding: 5px 12px; color: #e5b981; font-size: 10px; }
+.terminal-opt-in { display: flex; align-items: center; gap: 6px; padding: 5px 12px; color: #e5b981; font-size: 10px; }
+.terminal-opt-in input { accent-color: var(--primary-color); }
 .terminal-output { flex: 1; overflow: auto; padding: 7px 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: #aab9ad; }
 .terminal-line { margin-bottom: 4px; }
 .prompt, .terminal-prompt > span:first-child { color: var(--primary-color); }

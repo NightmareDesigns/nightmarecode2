@@ -16,6 +16,9 @@ let trustedAppUrl = null;
 let workspaceRoot = null;
 let microphoneAllowedForSession = false;
 let decompilationActive = false;
+let unrestrictedTerminalEnabled = false;
+let terminalShell = null;
+let terminalOutputLength = 0;
 const openedFiles = new Map();
 const activeProcesses = new Map();
 const MAX_AI_PROMPT_LENGTH = 16000;
@@ -82,7 +85,13 @@ ipcMain.handle('workspace:open', async (event) => {
   });
   if (result.canceled || result.filePaths.length === 0) return null;
 
-  workspaceRoot = await fs.realpath(result.filePaths[0]);
+  const selectedWorkspace = await fs.realpath(result.filePaths[0]);
+  if (workspaceRoot !== selectedWorkspace) {
+    unrestrictedTerminalEnabled = false;
+    stopTerminalShell();
+    sendTerminalState(false, '\n[Workspace changed; unrestricted terminal disabled.]\n');
+  }
+  workspaceRoot = selectedWorkspace;
   return {
     name: path.basename(workspaceRoot),
     id: createHash('sha256').update(workspaceRoot).digest('hex'),
@@ -202,7 +211,7 @@ ipcMain.handle('process:start', async (event, request) => {
     if (outputLength >= MAX_PROCESS_OUTPUT_LENGTH) return;
     const text = chunk.toString('utf8').slice(0, MAX_PROCESS_OUTPUT_LENGTH - outputLength);
     outputLength += Buffer.byteLength(text, 'utf8');
-    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
       mainWindow.webContents.send('process:output', { jobId, text });
     }
   };
@@ -211,7 +220,7 @@ ipcMain.handle('process:start', async (event, request) => {
   child.on('error', (error) => publishOutput(`\nCould not start ${command}: ${error.message}\n`));
   child.on('close', (code, signal) => {
     activeProcesses.delete(jobId);
-    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
       mainWindow.webContents.send('process:complete', { jobId, code, signal });
     }
   });
@@ -224,6 +233,131 @@ ipcMain.handle('process:stop', (event, jobId) => {
   if (!child) return false;
   return child.kill();
 });
+
+ipcMain.handle('terminal:set-enabled', async (event, enabled) => {
+  assertTrustedSender(event);
+  if (!['win32', 'linux'].includes(process.platform) || process.arch !== 'x64') {
+    throw new Error('The unrestricted terminal is available only in x64 Windows and Linux desktop builds.');
+  }
+  if (enabled !== true) {
+    unrestrictedTerminalEnabled = false;
+    stopTerminalShell();
+    sendTerminalState(false, '\n[Unrestricted terminal disabled.]\n');
+    return false;
+  }
+  if (!workspaceRoot) throw new Error('Open a workspace before enabling the unrestricted terminal.');
+  const consent = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: 'Enable unrestricted terminal?',
+    message: 'Terminal commands run with your account permissions and are not sandboxed.',
+    detail: 'Commands can read or change files outside the workspace, access the network, install software, or start other programs. Enable only when you need this. The terminal turns off when unchecked, the workspace changes, or the app closes.',
+    buttons: ['Enable terminal', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1
+  });
+  unrestrictedTerminalEnabled = consent.response === 0;
+  if (!unrestrictedTerminalEnabled) {
+    stopTerminalShell();
+    sendTerminalState(false, '\n[Terminal enable canceled.]\n');
+  } else {
+    sendTerminalState(true, '\n[Unrestricted terminal enabled. Commands run with your account permissions.]\n');
+  }
+  return unrestrictedTerminalEnabled;
+});
+
+ipcMain.handle('terminal:write', (event, command) => {
+  assertTrustedSender(event);
+  if (!unrestrictedTerminalEnabled) throw new Error('Enable the unrestricted terminal checkbox first.');
+  if (!workspaceRoot) throw new Error('Open a workspace before using the unrestricted terminal.');
+  if (typeof command !== 'string' || !command.trim() || command.length > 8000 || /[\0\r\n]/.test(command)) {
+    throw new Error('Enter a single terminal command up to 8,000 characters.');
+  }
+  if (!terminalShell) startTerminalShell();
+  if (!terminalShell || terminalShell.stdin.destroyed || !terminalShell.stdin.writable) {
+    throw new Error('The terminal shell is not available.');
+  }
+  if (terminalShell.stdin.writableLength > 64 * 1024) throw new Error('Terminal input is busy; wait for it to catch up.');
+  terminalShell.stdin.write(`${command}\n`);
+  return true;
+});
+
+function startTerminalShell() {
+  const isWindows = process.platform === 'win32';
+  const shell = isWindows ? (process.env.ComSpec || 'cmd.exe') : (process.env.SHELL || '/bin/bash');
+  const shellName = path.basename(shell).toLowerCase();
+  const args = isWindows ? ['/Q'] : shellName.includes('bash') ? ['--noprofile', '--norc', '-i'] : ['-i'];
+  const child = spawn(shell, args, {
+    cwd: workspaceRoot,
+    env: process.env,
+    shell: false,
+    windowsHide: true,
+    detached: !isWindows,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  terminalShell = child;
+  terminalOutputLength = 0;
+  const publishOutput = (chunk) => {
+    if (terminalShell !== child || terminalOutputLength >= MAX_PROCESS_OUTPUT_LENGTH) return;
+    const text = chunk.toString('utf8').slice(0, MAX_PROCESS_OUTPUT_LENGTH - terminalOutputLength);
+    terminalOutputLength += Buffer.byteLength(text, 'utf8');
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('terminal:shell-output', { text });
+    }
+    if (terminalOutputLength >= MAX_PROCESS_OUTPUT_LENGTH) {
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('terminal:shell-output', { text: '\n[Terminal output limit reached; shell stopped.]\n' });
+      }
+      stopTerminalShell();
+    }
+  };
+  child.stdout.on('data', publishOutput);
+  child.stderr.on('data', publishOutput);
+  child.on('error', (error) => {
+    if (terminalShell === child && mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('terminal:shell-output', { text: `\nCould not start shell: ${error.message}\n` });
+    }
+  });
+  child.on('close', (code, signal) => {
+    if (terminalShell !== child) return;
+    terminalShell = null;
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('terminal:shell-output', {
+        text: `\n[Terminal shell closed${signal ? ` (${signal})` : `, exit code ${code}`}]\n`
+      });
+    }
+  });
+}
+
+function sendTerminalState(enabled, text) {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+    mainWindow.webContents.send('terminal:shell-output', { enabled, text });
+  }
+}
+
+function stopTerminalShell() {
+  const child = terminalShell;
+  terminalShell = null;
+  if (!child || child.killed) return;
+  if (process.platform === 'win32') {
+    const taskkill = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'taskkill.exe');
+    const killer = spawn(taskkill, ['/pid', String(child.pid), '/t', '/f'], {
+      shell: false,
+      windowsHide: true,
+      stdio: 'ignore'
+    });
+    killer.on('error', () => child.kill());
+  } else {
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+      const forceKill = setTimeout(() => {
+        try { process.kill(-child.pid, 'SIGKILL'); } catch {}
+      }, 1000);
+      forceKill.unref();
+    } catch {
+      child.kill('SIGTERM');
+    }
+  }
+}
 
 ipcMain.handle('decompiler:run', async (event, request) => {
   assertTrustedSender(event);
@@ -435,6 +569,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  unrestrictedTerminalEnabled = false;
+  stopTerminalShell();
   for (const child of activeProcesses.values()) child.kill();
   activeProcesses.clear();
   decompiler.stopAll();

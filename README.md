@@ -183,7 +183,8 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
 - The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
-- Arbitrary terminal shell commands are not supported. Build/Run accepts JavaScript and Python workspace files; Decompile supports `.exe`, `.dll`, `.class`, `.jar`, and `.wasm` in the Windows/Linux x64 Electron desktop app.
+- Guided Build/Run accepts JavaScript and Python workspace files; Decompile supports `.exe`, `.dll`, `.class`, `.jar`, and `.wasm` in the Windows/Linux x64 Electron desktop app.
+- The unrestricted terminal is available only in the Windows/Linux desktop app. It is off by default on every launch and requires enabling its checkbox plus confirming a warning; commands run as your account, are not sandboxed, and can access files outside the workspace, the network, or other programs. Unchecking it, changing workspaces, or closing the app terminates the shell. Interactive full-screen programs that require a TTY are not supported.
 - Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
 - The AI assistant makes one model request at a time; workspace edits are constrained to explicitly selected, listed paths and are not an autonomous shell/tool agent. Local model-server availability depends on installing/configuring that server separately.

@@ -142,7 +142,14 @@
                 <div class="terminal-heading"><span>RUN OUTPUT</span><div><button id="toolsTerminalTab" class="quiet-button active-tool-tab" type="button">Run output</button><button id="toolsAiTab" class="quiet-button" type="button">AI assistant</button></div></div>
                 <div id="terminalView" class="tools-view">
                     <div id="terminalNotice" class="terminal-notice">JavaScript and Python run/build actions execute locally with your account permissions after confirmation. Decompilation downloads verified tools on demand after consent; target files are analyzed, never run, and are not sent to AI endpoints. Android does not support desktop decompilers.</div>
+                    <label class="terminal-opt-in"><input id="unrestrictedTerminalToggle" type="checkbox"> Enable unrestricted terminal (desktop only; unsandboxed commands)</label>
                     <div id="terminal" class="terminal-output" aria-live="polite"></div>
+                    <form id="terminalCommandForm" class="terminal-prompt">
+                        <label for="terminalCommand" class="visually-hidden">Terminal command</label>
+                        <span aria-hidden="true">$</span>
+                        <input id="terminalCommand" type="text" placeholder="Enable terminal to enter commands" autocomplete="off" disabled>
+                        <button id="terminalCommandSubmit" class="quiet-button" type="submit" disabled>Run</button>
+                    </form>
                     <button id="stopProcessBtn" class="quiet-button" type="button" hidden>Stop running process</button>
                 </div>
                 <div id="aiView" class="tools-view" hidden>

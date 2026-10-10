@@ -21,6 +21,14 @@ contextBridge.exposeInMainWorld('desktopApp', {
   },
   startWorkspaceProcess: (request) => ipcRenderer.invoke('process:start', request),
   stopWorkspaceProcess: (jobId) => ipcRenderer.invoke('process:stop', jobId),
+  setUnrestrictedTerminalEnabled: (enabled) => ipcRenderer.invoke('terminal:set-enabled', enabled),
+  writeTerminalCommand: (command) => ipcRenderer.invoke('terminal:write', command),
+  onTerminalOutput: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, result) => callback(result);
+    ipcRenderer.on('terminal:shell-output', listener);
+    return () => ipcRenderer.removeListener('terminal:shell-output', listener);
+  },
   onProcessOutput: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, result) => callback(result);
