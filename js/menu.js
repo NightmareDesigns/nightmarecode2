@@ -108,6 +108,9 @@ class AppMenu {
             case 'build-file':
                 this.runWorkspaceAction(`build ${manager?.currentFile || ''}`.trim());
                 break;
+            case 'decompile-file':
+                window.editorInstance?.decompileCurrentFile();
+                break;
             case 'toggle-ai':
                 window.editorInstance?.showToolsView('ai');
                 document.querySelector('.terminal-panel')?.classList.remove('collapsed');
@@ -133,7 +136,7 @@ class AppMenu {
                 window.editorInstance?.showToolsView('terminal');
                 break;
             case 'help-commands':
-                window.fileManager?.notify('Build/Run currently supports .js and .py workspace files; AI uses an OpenAI-compatible endpoint.');
+                window.fileManager?.notify('Build/Run supports .js and .py; Decompile supports .exe, .dll, .class, .jar, and .wasm in Windows/Linux desktop.');
                 break;
             case 'about':
                 alert('Nightmare Designs Code\n\nDark editor shell with Matrix visual theme.');

@@ -12,6 +12,13 @@ contextBridge.exposeInMainWorld('desktopApp', {
     return () => ipcRenderer.removeListener('display:info-changed', listener);
   },
   completeWithAI: (request) => ipcRenderer.invoke('ai:complete', request),
+  decompileWorkspaceFile: (request) => ipcRenderer.invoke('decompiler:run', request),
+  onDecompilerProgress: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, progress) => callback(progress);
+    ipcRenderer.on('decompiler:progress', listener);
+    return () => ipcRenderer.removeListener('decompiler:progress', listener);
+  },
   startWorkspaceProcess: (request) => ipcRenderer.invoke('process:start', request),
   stopWorkspaceProcess: (jobId) => ipcRenderer.invoke('process:stop', jobId),
   onProcessOutput: (callback) => {

@@ -227,7 +227,8 @@ class FileManager {
             py: 'Python', js: 'JavaScript', jsx: 'JavaScript JSX', ts: 'TypeScript', tsx: 'TypeScript JSX',
             html: 'HTML', css: 'CSS', sh: 'Shell', txt: 'Plain Text', json: 'JSON', md: 'Markdown',
             java: 'Java', cs: 'C#', cpp: 'C++', c: 'C', go: 'Go', rs: 'Rust', php: 'PHP', xml: 'XML',
-            yml: 'YAML', yaml: 'YAML', toml: 'TOML', sql: 'SQL'
+            yml: 'YAML', yaml: 'YAML', toml: 'TOML', sql: 'SQL',
+            exe: 'Windows Executable', dll: '.NET / Native Library', class: 'Java Bytecode', jar: 'Java Archive', wasm: 'WebAssembly'
         };
         return types[ext] || 'Plain Text';
     }

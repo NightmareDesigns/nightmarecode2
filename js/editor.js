@@ -8,6 +8,7 @@ class NightmareCodeEditor {
         this.externalDisplayActive = false;
         this.processEventBuffer = new Map();
         this.processStartPending = false;
+        this.decompilationPending = false;
         this.init();
     }
 
@@ -28,6 +29,10 @@ class NightmareCodeEditor {
         document.getElementById('stopProcessBtn')?.addEventListener('click', () => this.stopWorkspaceProcess());
         window.desktopApp?.onProcessOutput?.((result) => this.appendProcessOutput(result));
         window.desktopApp?.onProcessComplete?.((result) => this.finishWorkspaceProcess(result));
+        window.desktopApp?.onDecompilerProgress?.((progress) => {
+            const message = progress?.status;
+            if (typeof message === 'string') window.fileManager?.setStatus(message);
+        });
         document.addEventListener('keydown', (event) => this.handleShortcuts(event));
         window.addEventListener('resize', () => this.refreshExternalDisplayMode());
         window.editorInstance = this;
@@ -219,12 +224,65 @@ class NightmareCodeEditor {
         }
     }
 
+    async decompileCurrentFile() {
+        const manager = window.fileManager;
+        const fileName = manager?.currentFile;
+        const supported = /\.(exe|dll|class|jar|wasm)$/i.test(fileName || '');
+        this.showToolsView('terminal');
+        document.querySelector('.terminal-panel')?.classList.remove('collapsed');
+        if (!window.desktopApp?.decompileWorkspaceFile) {
+            this.appendTerminalMessage(window.desktopApp?.platform === 'android'
+                ? 'Desktop decompilation is not available on Android; Android cannot run Ghidra, ILSpy, CFR, or WABT.'
+                : 'Decompilation is only available in the Windows/Linux Electron desktop app.');
+            return;
+        }
+        if (!manager?.workspaceName || !fileName || !manager.files[fileName]?.isWorkspaceFile) {
+            this.appendTerminalMessage('Open a desktop workspace and select a workspace file first.');
+            return;
+        }
+        if (!supported) {
+            this.appendTerminalMessage('Decompilation supports .exe, .dll, .class, .jar, and .wasm files.');
+            return;
+        }
+        if (manager.files[fileName]?.dirty) {
+            this.appendTerminalMessage('Save the workspace file before decompiling it.');
+            return;
+        }
+        if (this.decompilationPending) {
+            this.appendTerminalMessage('A decompilation is already running.');
+            return;
+        }
+        this.decompilationPending = true;
+        this.appendTerminalMessage(`Decompiling ${fileName}…`);
+        try {
+            const result = await window.desktopApp.decompileWorkspaceFile({ file: fileName });
+            if (result?.cancelled) {
+                this.appendTerminalMessage('Decompilation canceled.');
+                return;
+            }
+            const output = result;
+            this.appendTerminalMessage(output);
+            this.appendTerminalMessage('Decompilation complete. Output is local and was not sent to an AI endpoint.');
+            window.fileManager?.setStatus('Decompilation complete');
+        } catch (error) {
+            this.appendTerminalMessage(`Decompilation failed: ${error.message}`);
+            window.fileManager?.setStatus('Decompilation failed', true);
+        } finally {
+            this.decompilationPending = false;
+        }
+    }
+
     async askAI() {
         const response = document.getElementById('aiResponse');
         const sendButton = document.getElementById('aiSendBtn');
         const review = document.getElementById('aiWorkspaceReview');
         const workspaceEdit = document.getElementById('aiWorkspaceEdit').checked;
         const autoApprove = document.getElementById('aiAutoApprove').checked;
+        const currentName = window.fileManager?.currentFile || '';
+        if (document.getElementById('aiIncludeFile').checked && /\.(exe|dll|class|jar|wasm)$/i.test(currentName)) {
+            response.textContent = 'Binary decompilation inputs stay local and cannot be included in AI requests.';
+            return;
+        }
         if (!window.desktopApp?.completeWithAI) {
             response.textContent = 'AI requests need the desktop app bridge. Browser and Android can still edit files, but do not have this AI connection.';
             if (workspaceEdit) review.textContent = 'Workspace AI edits require the desktop workspace bridge.';

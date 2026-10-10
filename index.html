@@ -48,6 +48,7 @@
                 <div class="dropdown-menu">
                     <button data-action="build-file" type="button">Build current file</button>
                     <button data-action="run-file" type="button">Run current file</button>
+                    <button data-action="decompile-file" type="button">Decompile current file</button>
                 </div>
             </div>
             <div class="dropdown">
@@ -140,7 +141,7 @@
             <section class="terminal-panel" aria-label="Run output and AI tools">
                 <div class="terminal-heading"><span>RUN OUTPUT</span><div><button id="toolsTerminalTab" class="quiet-button active-tool-tab" type="button">Run output</button><button id="toolsAiTab" class="quiet-button" type="button">AI assistant</button></div></div>
                 <div id="terminalView" class="tools-view">
-                    <div id="terminalNotice" class="terminal-notice">JavaScript and Python run/build actions execute locally with your account permissions after confirmation. This is not a sandbox.</div>
+                    <div id="terminalNotice" class="terminal-notice">JavaScript and Python run/build actions execute locally with your account permissions after confirmation. Decompilation downloads verified tools on demand after consent; target files are analyzed, never run, and are not sent to AI endpoints. Android does not support desktop decompilers.</div>
                     <div id="terminal" class="terminal-output" aria-live="polite"></div>
                     <button id="stopProcessBtn" class="quiet-button" type="button" hidden>Stop running process</button>
                 </div>

@@ -6,22 +6,28 @@ const net = require('net');
 const { spawn } = require('child_process');
 const { createHash, randomUUID } = require('crypto');
 const { pathToFileURL } = require('url');
+const decompiler = require('./decompiler');
 
 const MAX_TEXT_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_WORKSPACE_ENTRIES = 10000;
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'dist', 'build']);
 let mainWindow;
+let trustedAppUrl = null;
 let workspaceRoot = null;
 let microphoneAllowedForSession = false;
+let decompilationActive = false;
 const openedFiles = new Map();
 const activeProcesses = new Map();
 const MAX_AI_PROMPT_LENGTH = 16000;
 const MAX_AI_CONTEXT_LENGTH = 50000;
 const MAX_AI_RESPONSE_LENGTH = 32000;
 const MAX_PROCESS_OUTPUT_LENGTH = 1024 * 1024;
+const DECOMPILABLE_BINARY_EXTENSIONS = new Set(['.exe', '.dll', '.class', '.jar', '.wasm']);
 
 function assertTrustedSender(event) {
-  if (!mainWindow || event.sender !== mainWindow.webContents) {
+  if (!mainWindow || event.sender !== mainWindow.webContents ||
+      event.senderFrame !== mainWindow.webContents.mainFrame ||
+      event.senderFrame.url !== trustedAppUrl) {
     throw new Error('Untrusted application request.');
   }
 }
@@ -59,6 +65,9 @@ async function assertNoSymlink(absolutePath) {
 }
 
 async function readTextFile(absolutePath) {
+  if (DECOMPILABLE_BINARY_EXTENSIONS.has(path.extname(absolutePath).toLowerCase())) {
+    throw new Error('Binary decompilation inputs stay local and cannot be opened as AI text context.');
+  }
   const stats = await fs.stat(absolutePath);
   if (!stats.isFile() || stats.size > MAX_TEXT_FILE_SIZE) {
     throw new Error('Only text files up to 2 MB can be opened.');
@@ -216,6 +225,32 @@ ipcMain.handle('process:stop', (event, jobId) => {
   return child.kill();
 });
 
+ipcMain.handle('decompiler:run', async (event, request) => {
+  assertTrustedSender(event);
+  if (decompilationActive) throw new Error('A decompilation is already running.');
+  if (!workspaceRoot) throw new Error('Open a desktop workspace before decompiling a file.');
+  if (!request || typeof request.file !== 'string' || request.file.length > 1024) {
+    throw new Error('Select a valid workspace file to decompile.');
+  }
+  const selectedWorkspaceRoot = workspaceRoot;
+  decompilationActive = true;
+  try {
+    const consent = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Download and decompile?',
+      message: `Decompile ${path.basename(request.file)}?`,
+      detail: 'If needed, the app will download official pinned tools and runtimes and verify their SHA-256 before installing them locally. Ghidra and its JDK may use about 2 GB. The selected file will be analyzed, never run, and nothing will be sent to your configured AI endpoint.',
+      buttons: ['Download and decompile', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1
+    });
+    if (consent.response !== 0) return { cancelled: true };
+    return await decompiler.decompile(request, selectedWorkspaceRoot, app.getPath('userData'), mainWindow);
+  } finally {
+    decompilationActive = false;
+  }
+});
+
 function getMainWindowDisplayInfo() {
   if (!mainWindow || mainWindow.isDestroyed()) return { external: false };
   const displays = screen.getAllDisplays();
@@ -345,6 +380,7 @@ function createWindow() {
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const appUrl = pathToFileURL(path.join(__dirname, 'index.html')).href;
+  trustedAppUrl = appUrl;
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const audioOnly = details?.mediaTypes?.includes('audio') && !details.mediaTypes.includes('video');
     if (webContents !== mainWindow.webContents || webContents.getURL() !== appUrl || permission !== 'media' || !audioOnly) {
@@ -401,4 +437,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   for (const child of activeProcesses.values()) child.kill();
   activeProcesses.clear();
+  decompiler.stopAll();
 });

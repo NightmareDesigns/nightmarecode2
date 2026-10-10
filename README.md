@@ -11,6 +11,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - File type detection for common programming languages and configuration formats
 - Line numbers and code statistics in the status bar
 - Build and Run for JavaScript and Python files in desktop workspaces, with explicit execution consent
+- Decompile native PE executables, managed .NET assemblies, Java bytecode/JARs, and WebAssembly in the Windows/Linux Electron desktop app
 - OpenAI-compatible coding assistant for local model servers or HTTPS API endpoints, with reviewable workspace edits
 - Syntax highlighting for supported languages
 - Voice menu for speech-to-text dictation, built-in editor commands, and read-aloud
@@ -95,7 +96,16 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - Each action asks for confirmation. Project code runs as your user and is not sandboxed; only run code you trust.
    - Process output is shown in Run Output. Stop requests termination of the launched process.
 
-6. **AI assistant**
+6. **Decompile**
+   - In a Windows/Linux x64 Electron desktop workspace, choose **Build → Decompile current file** for `.exe`, `.dll`, `.class`, `.jar`, or `.wasm`.
+   - PE files are routed by inspecting the PE CLR data directory, CLR header, and .NET metadata signature: valid managed `.exe`/`.dll` files use ILSpy 11.1 CLI, while native or unrecognized PE files use Ghidra 12.1.4 headless. ILSpy is not used as a native-PE decompiler. Files lacking valid CLR metadata (including malformed/obfuscated PE) go to Ghidra; mixed-mode files with valid metadata go to ILSpy and may be incomplete or unsupported. The engine is shown in output and errors are reported; there is no manual engine override or fallback after managed classification. Java bytecode/JARs use CFR 0.152; WebAssembly uses WABT 1.0.42 `wasm2wat`.
+   - **Runtime/provisioning:** Ghidra requires a 64-bit JDK 21; CFR is a Java CLI and uses that same app-provisioned JDK. ILSpy 11.1 CLI targets .NET 10, and the app provisions its .NET runtime. WABT's `wasm2wat` is a standalone native tool. After native consent, the app downloads pinned Windows/Linux x64 tool/runtime releases, verifies SHA-256 before extraction, and stores them in local app data. Nothing is installed by the user, fetched at app startup, bundled in the installer, or sent to the configured AI endpoint.
+   - **Fidelity:** Decompilation cannot recover original source exactly. Ghidra emits approximate pseudo-C, not necessarily compilable source; ILSpy and CFR reconstruct high-level code but cannot restore lost comments, formatting, local names, or source-level constructs. Optimization, obfuscation, stripped symbols, and missing debug metadata reduce fidelity. `wasm2wat` converts Wasm bytecode to low-level WAT; it does not recover the original C/C++/Rust/etc. source. Preserved names/debug sections can help, but are not guaranteed.
+   - The app asks before each request. Downloads are on demand, never at startup. Download/extraction progress appears in the status bar; output and errors appear in Run Output. Output is rendered as plain text and capped at 2 MB; inputs are capped at 64 MB and tool execution at 15 minutes. Ghidra output is additionally limited to 500 functions.
+   - The app snapshots the selected workspace file and analyzes that copy. It never executes the target file; supported binary formats are blocked from text-opening and AI-context routes, and decompiled output is not sent to the configured AI endpoint. Tool archives are kept locally and are not bundled into the installer.
+   - Android's native WebView cannot run these desktop engines; decompilation is unavailable in Android and browser mode.
+
+7. **AI assistant**
    - Open the AI assistant tab and enter an OpenAI-compatible chat-completions endpoint and model.
    - The default endpoint/model target a local Ollama-compatible server. Remote endpoints must use HTTPS.
    - API keys remain in memory in the open window and are not saved. The current file is sent only when you check “Include current file.”
@@ -113,6 +123,9 @@ The Windows portable executable is unsigned unless a code-signing certificate is
 ```
 nightmarecode2/
 ├── index.html              # Main HTML file
+├── main.js                 # Electron IPC, workspace access, and window lifecycle
+├── preload.js              # Context-isolated IPC bridge
+├── decompiler.js           # Pinned tools, verified acquisition, and local execution
 ├── css/
 │   └── style.css          # All styling and theming
 ├── js/
@@ -170,12 +183,13 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
 - The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
-- Arbitrary terminal shell commands are not supported. Build/Run currently accepts only JavaScript and Python workspace files.
+- Arbitrary terminal shell commands are not supported. Build/Run accepts JavaScript and Python workspace files; Decompile supports `.exe`, `.dll`, `.class`, `.jar`, and `.wasm` in the Windows/Linux x64 Electron desktop app.
 - Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
 - The AI assistant makes one model request at a time; workspace edits are constrained to explicitly selected, listed paths and are not an autonomous shell/tool agent. Local model-server availability depends on installing/configuring that server separately.
 - AI/API and workspace-edit bridges are desktop-only; browser and Android have no AI bridge.
-- There is no plugin marketplace, Language Server Protocol integration, debugger, or decompiler backend. Automatic acquisition/building of decompiler tools for the requested formats is not implemented by the renderer; it requires a separate backend/decompiler change.
+- Decompilation analyzes untrusted file contents but is not OS-sandboxed; the selected target is never executed. Keep tools current by updating the app's pinned tool manifest. Output is limited to 2 MB, input files to 64 MB, each tool download to a bounded size, and each process to 15 minutes.
+- Android is a separate WebView app and cannot run Ghidra, ILSpy, CFR, or WABT. Browser mode also has no decompiler or workspace IPC.
 - An autonomous AI agent or plugin system needs explicit permissions and stronger process isolation before it can execute tools.
 - Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
 
@@ -214,13 +228,26 @@ Requires browser support for:
 - [ ] Permissioned plugin system and trusted marketplace support
 - [ ] Configurable local/cloud AI coding agent with reviewable diffs and checkpoints
 - [ ] Sandboxed build and run tools with explicit user approval
-- [ ] Decompiler backend for supported formats, including automatic acquisition/build of required tools
+- [x] Decompiler backend for supported formats, including on-demand verified tool acquisition
 - [ ] Split editor view
 - [ ] Arbitrary terminal shell with safe sandbox support
 
 ## License
 
 MIT License - Feel free to use, modify, and distribute!
+
+### Decompiler tool notices
+
+The Electron desktop app downloads pinned upstream tools only after a user requests decompilation. The tools remain in the local app-data directory and are not included in the app installer:
+
+- Ghidra 12.1.4 — Apache License 2.0; https://github.com/NationalSecurityAgency/ghidra
+- ILSpy 11.1.0.9782 — MIT License; https://github.com/icsharpcode/ILSpy
+- CFR 0.152 — MIT License; https://www.benf.org/other/cfr/
+- WABT 1.0.42 — Apache License 2.0; https://github.com/WebAssembly/wabt
+- Eclipse Temurin JDK 21.0.12.1+1 (64-bit) — GPLv2 with Classpath Exception; https://github.com/adoptium/temurin21-binaries
+- .NET Runtime 10.0.12 — MIT License; https://github.com/dotnet/runtime
+
+Downloads use fixed upstream URLs and embedded SHA-256 values. Archive entries are checked for traversal, links outside the install directory, special files, and size limits before they are written. Tool output is shown as text; binaries and decompiled content remain local.
 
 ## Contributing
 
