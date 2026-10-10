@@ -144,14 +144,14 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 
 ## Platform Support
 
-- Windows desktop: standalone portable x64 EXE
+- Windows desktop: standalone portable x64 EXE; connecting XREAL as an external monitor automatically enables high-contrast glasses mode when the app window is moved to that display
 - Linux desktop: AppImage package
 - Android: installable APK with file picker and Save dialog
 - Browser mode: recent desktop browsers; folder access depends on browser support and is currently not enabled
 - Samsung DeX: the Android activity is resizable for DeX windowed use and physical keyboard input
-- XREAL glasses: the APK supports regular 2D external-display use; secondary Android displays automatically enable high-contrast glasses mode, which can also be toggled from View
+- XREAL glasses: use either the Windows EXE on a PC with display output or the APK on a compatible Android device; both enable high-contrast glasses mode when the app is on a detected secondary display, with a manual View-menu toggle
 
-This is a standard Android APK, not an XREAL spatial SDK app. Mirroring is controlled by Android/DeX and cannot be detected independently; automatic glasses mode activates when Android launches the app on a separate external display. The APK still needs physical Samsung DeX/XREAL testing. Display output depends on the phone, adapter, and glasses supporting the required USB-C DisplayPort path.
+This is a standard 2D app, not an XREAL spatial SDK app. Mirroring is controlled by the operating system and cannot be detected independently; automatic glasses mode activates when the app window is assigned to a detected secondary display. On PC, connect the glasses as a display and move the app onto it. The Android APK still needs physical Samsung DeX/XREAL testing. Display output depends on the computer/phone, adapter, and glasses supporting the required display connection.
 
 Windows and Linux Electron packages can be built with `npm run package` and `npm run dist`, respectively. Android is a separate native WebView wrapper, not an Electron target.
 

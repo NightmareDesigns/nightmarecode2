@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, screen, session } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
 const { createHash, randomUUID } = require('crypto');
@@ -72,6 +72,25 @@ ipcMain.handle('workspace:open', async (event) => {
     files: await listWorkspaceFiles()
   };
 });
+
+ipcMain.handle('display:info', (event) => {
+  assertTrustedSender(event);
+  return getMainWindowDisplayInfo();
+});
+
+function getMainWindowDisplayInfo() {
+  if (!mainWindow || mainWindow.isDestroyed()) return { external: false };
+  const displays = screen.getAllDisplays();
+  const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
+  const primaryDisplay = screen.getPrimaryDisplay();
+  return { external: displays.length > 1 && currentDisplay.id !== primaryDisplay.id };
+}
+
+function notifyDisplayInfo() {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+    mainWindow.webContents.send('display:info-changed', getMainWindowDisplayInfo());
+  }
+}
 
 async function listWorkspaceFiles() {
   const files = [];
@@ -194,6 +213,12 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (url !== appUrl) event.preventDefault();
   });
+  mainWindow.on('move', notifyDisplayInfo);
+  mainWindow.on('resize', notifyDisplayInfo);
+  mainWindow.webContents.on('did-finish-load', notifyDisplayInfo);
+  screen.on('display-added', notifyDisplayInfo);
+  screen.on('display-removed', notifyDisplayInfo);
+  screen.on('display-metrics-changed', notifyDisplayInfo);
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 

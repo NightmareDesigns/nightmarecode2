@@ -18,7 +18,7 @@ class NightmareCodeEditor {
         this.voiceStopRequested = false;
         this.voicePrivacyNotified = false;
         this.glassesModeManuallySet = false;
-        this.externalDisplayActive = Boolean(window.androidApp?.isExternalDisplay());
+        this.externalDisplayActive = false;
         this.init();
     }
 
@@ -37,8 +37,10 @@ class NightmareCodeEditor {
         });
         document.getElementById('browserFileInput')?.addEventListener('change', (event) => this.openBrowserFile(event));
         document.addEventListener('keydown', (event) => this.handleShortcuts(event));
+        window.addEventListener('resize', () => this.refreshExternalDisplayMode());
         window.editorInstance = this;
-        this.syncExternalDisplayMode(this.externalDisplayActive);
+        window.desktopApp?.onDisplayInfo?.((displayInfo) => this.syncExternalDisplayMode(displayInfo.external));
+        this.refreshExternalDisplayMode();
     }
 
     handleShortcuts(event) {
@@ -366,6 +368,20 @@ class NightmareCodeEditor {
     syncExternalDisplayMode(isExternalDisplay) {
         this.externalDisplayActive = Boolean(isExternalDisplay);
         if (!this.glassesModeManuallySet) this.applyGlassesMode(this.externalDisplayActive);
+    }
+
+    async refreshExternalDisplayMode() {
+        if (window.androidApp) {
+            this.syncExternalDisplayMode(window.androidApp.isExternalDisplay());
+            return;
+        }
+        if (!window.desktopApp?.getDisplayInfo) return;
+        try {
+            const displayInfo = await window.desktopApp.getDisplayInfo();
+            this.syncExternalDisplayMode(displayInfo.external);
+        } catch {
+            this.syncExternalDisplayMode(false);
+        }
     }
 
     toggleGlassesMode() {
