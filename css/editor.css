@@ -1,0 +1,437 @@
+:root {
+    --primary-color: #39ff14;
+    --dark-bg: #000000;
+    --dark-bg-secondary: #050505;
+    --dark-bg-tertiary: #0d0d0d;
+    --text-color: #39ff14;
+    --border-color: #8b0000;
+    --accent-color: #b30000;
+    --matrix-color: #39ff14;
+    --panel-opacity: 0.6;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;
+    min-height: 0;
+    overflow: hidden;
+    color: var(--text-color);
+    background: var(--dark-bg);
+    font-family: 'Courier New', monospace;
+    -webkit-text-size-adjust: 100%;
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+button {
+    color: inherit;
+    touch-action: manipulation;
+}
+
+#matrixCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.app-menu,
+.editor-container {
+    position: relative;
+    z-index: 1;
+}
+
+.app-menu {
+    flex: 0 0 36px;
+}
+
+.editor-container {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border: 2px solid var(--border-color);
+    box-shadow: inset 0 0 14px rgba(139, 0, 0, 0.45);
+}
+
+.sidebar {
+    display: flex;
+    flex: 0 0 clamp(220px, 24vw, 320px);
+    flex-direction: column;
+    min-width: 0;
+    overflow: auto;
+    background: color-mix(in srgb, var(--dark-bg-secondary) calc(var(--panel-opacity) * 100%), transparent);
+    border-right: 2px solid var(--border-color);
+    transition: flex-basis 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar.collapsed {
+    flex-basis: 0;
+    overflow: hidden;
+    border: 0;
+}
+
+.sidebar-header,
+.terminal-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logo {
+    color: var(--border-color);
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 6px rgba(139, 0, 0, 0.8);
+}
+
+.toggle-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.toggle-btn:hover {
+    text-shadow: 0 0 10px var(--text-color);
+}
+
+.file-explorer {
+    flex: 0 0 auto;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.explorer-title,
+.settings-title {
+    margin: 4px 0 10px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.file-tree {
+    max-height: min(32vh, 300px);
+    margin-bottom: 10px;
+    overflow: auto;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+}
+
+.file-item:hover,
+.file-item.active {
+    background: color-mix(in srgb, var(--border-color) 22%, transparent);
+}
+
+.file-item.active {
+    border-left: 3px solid var(--text-color);
+}
+
+.file-name {
+    overflow: hidden;
+    flex: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-btn {
+    width: 100%;
+    min-height: 42px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--dark-bg-tertiary) 90%, transparent);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.action-btn:hover {
+    border-color: var(--text-color);
+    background: color-mix(in srgb, var(--border-color) 22%, transparent);
+}
+
+.settings-panel {
+    padding: 12px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.setting-item label,
+.setting-item span {
+    font-size: 11px;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+    min-height: 28px;
+    accent-color: var(--text-color);
+}
+
+.setting-item input[type="color"] {
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid var(--border-color);
+    background: var(--dark-bg);
+}
+
+.editor-area {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: color-mix(in srgb, var(--dark-bg) 86%, transparent);
+}
+
+.tabs {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-container {
+    display: flex;
+    min-width: max-content;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 4px 8px 4px 12px;
+    border-right: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.tab.active {
+    background: color-mix(in srgb, var(--border-color) 18%, transparent);
+}
+
+.tab-name {
+    max-width: 24ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tab-close {
+    min-width: 32px;
+    min-height: 32px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.editor-wrapper {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 80px;
+    overflow: hidden;
+}
+
+.line-numbers {
+    flex: 0 0 auto;
+    min-width: 42px;
+    padding: 12px 8px;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--text-color) 62%, transparent);
+    background: color-mix(in srgb, var(--dark-bg-secondary) 88%, transparent);
+    text-align: right;
+    white-space: pre;
+    line-height: 1.5;
+    user-select: none;
+}
+
+.code-editor {
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    resize: none;
+    border: 0;
+    outline: 0;
+    color: var(--text-color);
+    background: transparent;
+    caret-color: var(--text-color);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    tab-size: 4;
+    white-space: pre;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.code-editor::placeholder {
+    color: color-mix(in srgb, var(--text-color) 48%, transparent);
+}
+
+.terminal-panel {
+    display: flex;
+    flex: 0 0 min(25vh, 220px);
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.terminal-panel.collapsed {
+    flex-basis: 44px;
+}
+
+.terminal-panel.collapsed .terminal,
+.terminal-panel.collapsed .terminal-input {
+    display: none;
+}
+
+.terminal-header {
+    min-height: 40px;
+    padding: 0 8px 0 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.terminal {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 8px 12px;
+    overflow: auto;
+    color: var(--text-color);
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+.terminal-line {
+    margin-bottom: 4px;
+}
+
+.prompt {
+    color: var(--border-color);
+}
+
+.terminal-input {
+    flex: 0 0 42px;
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    outline: 0;
+    color: var(--text-color);
+    background: var(--dark-bg-secondary);
+}
+
+.status-bar {
+    display: flex;
+    flex: 0 0 30px;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+    padding: 0 10px;
+    overflow: hidden;
+    border-top: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--border-color) 20%, var(--dark-bg));
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.status-item {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 800px) {
+    .sidebar {
+        position: absolute;
+        z-index: 15;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(82vw, 300px);
+        flex-basis: auto;
+        box-shadow: 8px 0 24px rgba(0, 0, 0, 0.7);
+    }
+
+    .sidebar.collapsed {
+        width: min(82vw, 300px);
+        transform: translateX(-105%);
+    }
+
+    .editor-area {
+        width: 100%;
+    }
+
+    .window-status {
+        display: none;
+    }
+}
+
+@media (max-height: 560px) {
+    .terminal-panel:not(.collapsed) {
+        flex-basis: 22vh;
+    }
+
+    .settings-panel {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+}
+
+@media (pointer: coarse) {
+    .menu-button {
+        min-height: 40px;
+    }
+
+    .tab-close,
+    .toggle-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}

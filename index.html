@@ -1,3 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>Nightmare Designs Code</title>
+    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+
+    <header class="app-menu" aria-label="Application menu">
+        <nav class="menu-group" aria-label="Main menu">
+            <div class="dropdown">
+                <button class="menu-button" type="button">File</button>
+                <div class="dropdown-menu">
+                    <button type="button" data-action="new-file">New File</button>
+                    <button type="button" data-action="open-file">Open File</button>
+                    <button type="button" data-action="save-file">Save</button>
+                    <button type="button" data-action="save-as">Save As</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">Edit</button>
+                <div class="dropdown-menu">
+                    <button type="button" data-action="copy">Copy</button>
+                    <button type="button" data-action="paste">Paste</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">View</button>
+                <div class="dropdown-menu">
+                    <button type="button" data-action="toggle-sidebar">Toggle Explorer</button>
+                    <button type="button" data-action="toggle-terminal">Toggle Terminal</button>
+                    <button type="button" data-action="focus-editor">Focus Editor</button>
+                    <button type="button" data-action="focus-terminal">Focus Terminal</button>
+                    <button type="button" data-action="toggle-theme-panel">Theme Settings</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">Help</button>
+                <div class="dropdown-menu">
+                    <button type="button" data-action="help-commands">Terminal Commands</button>
+                    <button type="button" data-action="about">About</button>
+                </div>
+            </div>
+        </nav>
+        <span class="window-status">Keyboard · Mouse · Touch</span>
+    </header>
+
+    <main class="editor-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo drip-text" aria-label="Nightmare Designs Code">🩸 NIGHTMARE DESIGNS CODE</div>
+                <button id="toggleSidebar" class="toggle-btn" type="button" aria-label="Toggle explorer">☰</button>
+            </div>
+
+            <section class="file-explorer" aria-label="File explorer">
+                <div class="explorer-title">Explorer</div>
+                <div id="fileTree" class="file-tree"></div>
+                <button id="newFileBtn" class="action-btn" type="button">+ New File</button>
+                <button id="openFileBtn" class="action-btn" type="button">📁 Open File</button>
+            </section>
+
+            <section class="settings-panel" aria-label="Settings">
+                <div class="settings-title">Settings</div>
+                <div class="setting-item">
+                    <label for="opacitySlider">Matrix Opacity</label>
+                    <input type="range" id="opacitySlider" min="0" max="100" value="42">
+                    <span id="opacityValue">42%</span>
+                </div>
+                <div class="setting-item">
+                    <label for="speedSlider">Animation Speed</label>
+                    <input type="range" id="speedSlider" min="1" max="10" value="3">
+                    <span id="speedValue">3x</span>
+                </div>
+                <div class="setting-item">
+                    <button id="pauseBtn" class="action-btn" type="button">⏸ Pause Matrix</button>
+                </div>
+
+                <div class="settings-title">Theme</div>
+                <div class="setting-item">
+                    <label for="themeBackgroundColor">Background Color</label>
+                    <input type="color" id="themeBackgroundColor" value="#000000">
+                </div>
+                <div class="setting-item">
+                    <label for="themeFrameColor">Frame/Blood Color</label>
+                    <input type="color" id="themeFrameColor" value="#8b0000">
+                </div>
+                <div class="setting-item">
+                    <label for="themeTextColor">Text Color</label>
+                    <input type="color" id="themeTextColor" value="#39ff14">
+                </div>
+                <div class="setting-item">
+                    <label for="themeMatrixColor">Matrix Color</label>
+                    <input type="color" id="themeMatrixColor" value="#39ff14">
+                </div>
+                <div class="setting-item">
+                    <label for="panelOpacitySlider">Panel Opacity</label>
+                    <input type="range" id="panelOpacitySlider" min="10" max="100" value="60">
+                    <span id="panelOpacityValue">60%</span>
+                </div>
+                <div class="setting-item">
+                    <button id="resetThemeBtn" class="action-btn" type="button">↺ Reset Theme Defaults</button>
+                </div>
+            </section>
+        </aside>
+
+        <section class="editor-area" aria-label="Code editor">
+            <div class="tabs">
+                <div class="tab-container"></div>
+            </div>
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
+                <textarea id="codeEditor" class="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Code editor" placeholder="// Start coding in Nightmare Designs Code..."></textarea>
+            </div>
+            <section class="terminal-panel" aria-label="Terminal">
+                <div class="terminal-header">
+                    <span>Terminal</span>
+                    <button id="toggleTerminal" class="toggle-btn" type="button" aria-label="Toggle terminal">−</button>
+                </div>
+                <div id="terminal" class="terminal" aria-live="polite">
+                    <div class="terminal-line"><span class="prompt">$</span> Welcome to Nightmare Designs Code Terminal</div>
+                    <div class="terminal-line"><span class="prompt">$</span> Type 'help' for commands</div>
+                </div>
+                <input type="text" id="terminalInput" class="terminal-input" aria-label="Terminal input" placeholder="Terminal input (demo mode)...">
+            </section>
+            <footer class="status-bar">
+                <div class="status-item">Line <span id="lineCount">1</span>, Column <span id="columnCount">1</span></div>
+                <div class="status-item"><span id="fileType">Plain Text</span></div>
+                <div class="status-item">UTF-8</div>
+                <div class="status-item" id="fileSize">0 B</div>
+            </footer>
+        </section>
+    </main>
+
     <script src="js/matrix.js"></script>
     <script src="js/filemanager.js"></script>
     <script src="js/editor.js"></script>
