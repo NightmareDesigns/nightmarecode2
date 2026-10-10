@@ -55,7 +55,7 @@ cd nightmarecode2
 
 ### Build installers
 
-- **Windows portable EXE:** run `npm run package` on Windows.
+- **Windows portable EXE:** `npm run package`.
   Produces `dist/NightmareDesignsCode-0.1.0-portable.exe` (x64, no installer required).
 - **macOS DMG / Linux AppImage:** `npm run dist` on the corresponding operating system.
 - **Android debug APK:** `./android/gradlew -p android assembleDebug` (macOS/Linux) or
@@ -66,6 +66,7 @@ The Android build requires JDK 17+, Android SDK Platform 35, and network access 
 the first build so the Gradle wrapper and Android Gradle Plugin can be downloaded.
 The debug APK is suitable for installation/testing; a signed release APK needs a
 developer-owned signing key.
+The Windows portable executable is unsigned unless a code-signing certificate is configured.
 
 ### Usage
 
