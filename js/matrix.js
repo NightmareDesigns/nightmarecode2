@@ -7,13 +7,13 @@ class MatrixBackground {
         if (!this.ctx) return;
 
         this.defaults = {
-            matrixOpacity: 42,
-            matrixColor: '#39ff14',
-            backgroundColor: '#000000',
-            frameColor: '#8b0000',
-            textColor: '#39ff14',
-            panelOpacity: 60,
-            speed: 3
+            matrixOpacity: 10,
+            matrixColor: '#4daafc',
+            backgroundColor: '#1e1e1e',
+            frameColor: '#007acc',
+            textColor: '#d4d4d4',
+            panelOpacity: 92,
+            speed: 2
         };
 
         this.resizeCanvas();

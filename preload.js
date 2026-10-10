@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('desktopApp', {
   platform: process.platform,
+  architecture: process.arch,
   version: process.versions.electron,
   isDesktop: true,
   getDisplayInfo: () => ipcRenderer.invoke('display:info'),

@@ -80,6 +80,14 @@
     </header>
 
     <main class="app-shell">
+        <nav class="activity-bar" aria-label="Activity bar">
+            <button class="activity-button active" data-action="toggle-sidebar" type="button" title="Toggle Explorer" aria-label="Toggle Explorer"><span aria-hidden="true">▤</span></button>
+            <button class="activity-button" data-action="focus-search" type="button" title="Search workspace files" aria-label="Search workspace files"><span aria-hidden="true">⌕</span></button>
+            <button class="activity-button" data-action="toggle-theme-panel" type="button" title="Appearance settings" aria-label="Appearance settings"><span aria-hidden="true">⚙</span></button>
+            <div class="activity-spacer"></div>
+            <button class="activity-button" data-action="run-terminal" type="button" title="Run output" aria-label="Run output"><span aria-hidden="true">▷</span></button>
+            <button class="activity-button" data-action="toggle-ai" type="button" title="AI assistant" aria-label="AI assistant"><span aria-hidden="true">✦</span></button>
+        </nav>
         <aside class="sidebar">
             <div class="panel-heading">
                 <span>EXPLORER</span>
@@ -94,26 +102,26 @@
                 <input id="searchFiles" type="search" placeholder="Filter files…" autocomplete="off">
             </label>
             <div id="fileTree" class="file-tree" role="tree" aria-label="Workspace files"></div>
-            <section class="settings-panel" aria-label="Appearance">
-                <h2>APPEARANCE</h2>
-                <label>Matrix opacity <span id="opacityValue">42%</span>
-                    <input id="opacitySlider" type="range" min="0" max="100" value="42">
+            <details id="settingsPanel" class="settings-panel">
+                <summary>Appearance</summary>
+                <label>Matrix opacity <span id="opacityValue">10%</span>
+                <input id="opacitySlider" type="range" min="0" max="100" value="10">
                 </label>
-                <label>Matrix speed <span id="speedValue">3x</span>
-                    <input id="speedSlider" type="range" min="1" max="10" value="3">
+                <label>Matrix speed <span id="speedValue">2x</span>
+                <input id="speedSlider" type="range" min="1" max="10" value="2">
                 </label>
-                <label>Panel opacity <span id="panelOpacityValue">60%</span>
-                    <input id="panelOpacitySlider" type="range" min="10" max="100" value="60">
+                <label>Panel opacity <span id="panelOpacityValue">92%</span>
+                <input id="panelOpacitySlider" type="range" min="10" max="100" value="92">
                 </label>
                 <div class="color-settings">
-                    <label>Background <input id="themeBackgroundColor" type="color" value="#000000"></label>
-                    <label>Frame <input id="themeFrameColor" type="color" value="#8b0000"></label>
-                    <label>Text <input id="themeTextColor" type="color" value="#39ff14"></label>
-                    <label>Matrix <input id="themeMatrixColor" type="color" value="#39ff14"></label>
+                <label>Background <input id="themeBackgroundColor" type="color" value="#1e1e1e"></label>
+                <label>Frame <input id="themeFrameColor" type="color" value="#007acc"></label>
+                <label>Text <input id="themeTextColor" type="color" value="#d4d4d4"></label>
+                <label>Matrix <input id="themeMatrixColor" type="color" value="#4daafc"></label>
                 </div>
                 <button id="resetThemeBtn" class="quiet-button" type="button">Reset appearance</button>
                 <button id="pauseBtn" class="quiet-button" type="button">⏸ Pause Matrix</button>
-            </section>
+            </details>
         </aside>
 
         <section class="workbench">
@@ -124,6 +132,7 @@
                 <button id="toggleTerminal" class="quiet-button" type="button">Terminal</button>
             </div>
             <div class="tab-container" role="tablist" aria-label="Open files"></div>
+            <div id="editorBreadcrumbs" class="editor-breadcrumbs" aria-label="Current file path">No file open</div>
             <div class="editor-wrap">
                 <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
                 <div class="editor-code-pane">
@@ -140,10 +149,11 @@
                 <span id="displayModeStatus">Standard display</span>
             </div>
             <section class="terminal-panel" aria-label="Run output and AI tools">
-                <div class="terminal-heading"><span>RUN OUTPUT</span><div><button id="toolsTerminalTab" class="quiet-button active-tool-tab" type="button">Run output</button><button id="toolsAiTab" class="quiet-button" type="button">AI assistant</button></div></div>
+                <div class="terminal-heading"><div class="panel-tabs"><button id="toolsTerminalTab" class="panel-tab active-tool-tab" type="button">TERMINAL</button><button id="toolsAiTab" class="panel-tab" type="button">AI ASSISTANT</button></div><button class="panel-close" data-action="toggle-terminal" type="button" title="Hide panel" aria-label="Hide panel">×</button></div>
                 <div id="terminalView" class="tools-view">
                     <div id="terminalNotice" class="terminal-notice">JavaScript and Python run/build actions execute locally with your account permissions after confirmation. Decompilation downloads verified tools on demand after consent; target files are analyzed, never run, and are not sent to AI endpoints. Android does not support desktop decompilers.</div>
-                    <label class="terminal-opt-in"><input id="unrestrictedTerminalToggle" type="checkbox"> Enable unrestricted terminal (desktop only; unsandboxed commands)</label>
+                    <label class="terminal-opt-in"><input id="unrestrictedTerminalToggle" type="checkbox"> Enable unrestricted terminal <span>(desktop only; unsandboxed)</span></label>
+                    <div id="terminalAvailability" class="terminal-availability" role="status"></div>
                     <div id="terminal" class="terminal-output" aria-live="polite"></div>
                     <form id="terminalCommandForm" class="terminal-prompt">
                         <label for="terminalCommand" class="visually-hidden">Terminal command</label>

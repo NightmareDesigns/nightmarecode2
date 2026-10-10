@@ -150,6 +150,10 @@ class FileManager {
         const editor = document.getElementById('codeEditor');
         const file = this.currentFile && this.files[this.currentFile];
         if (!editor || !file) return;
+        const breadcrumbs = document.getElementById('editorBreadcrumbs');
+        if (breadcrumbs) {
+            breadcrumbs.textContent = [this.workspaceName, this.currentFile].filter(Boolean).join(' › ') || 'No file open';
+        }
         editor.value = file.content || '';
         this.updateLineNumbers();
         this.updateHighlight();

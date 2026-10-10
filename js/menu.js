@@ -100,7 +100,16 @@ class AppMenu {
                 window.editorInstance?.toggleGlassesMode();
                 break;
             case 'toggle-theme-panel':
-                document.querySelector('.settings-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                document.querySelector('.sidebar')?.classList.remove('collapsed');
+                const settingsPanel = document.getElementById('settingsPanel');
+                if (settingsPanel) {
+                    settingsPanel.open = true;
+                    settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                break;
+            case 'focus-search':
+                document.querySelector('.sidebar')?.classList.remove('collapsed');
+                document.getElementById('searchFiles')?.focus();
                 break;
             case 'run-file':
                 this.runWorkspaceAction(`run ${manager?.currentFile || ''}`);

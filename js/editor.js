@@ -47,9 +47,21 @@ class NightmareCodeEditor {
             if (typeof result?.enabled === 'boolean') this.setUnrestrictedTerminalUI(result.enabled);
             if (typeof result?.text === 'string') this.appendTerminalMessage(result.text);
         });
-        if (!window.desktopApp?.setUnrestrictedTerminalEnabled) {
+        const terminalSupported = window.desktopApp?.isDesktop &&
+            ['win32', 'linux'].includes(window.desktopApp.platform) &&
+            window.desktopApp.architecture === 'x64';
+        if (!terminalSupported) {
             const toggle = document.getElementById('unrestrictedTerminalToggle');
-            if (toggle) toggle.disabled = true;
+            if (toggle) {
+                toggle.disabled = true;
+                toggle.title = 'Available in the x64 Windows or Linux desktop app.';
+            }
+            const availability = document.getElementById('terminalAvailability');
+            if (availability) {
+                availability.textContent = window.desktopApp?.isDesktop
+                    ? 'Unrestricted terminal requires the x64 Windows or Linux desktop app.'
+                    : 'Unrestricted terminal is available in the desktop app only; open a workspace to enable it.';
+            }
         }
         if (!window.desktopApp?.prepareLocalDictation || !window.desktopApp?.transcribeLocalAudio) {
             const toggle = document.getElementById('localDictationToggle');
