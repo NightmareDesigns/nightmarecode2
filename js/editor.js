@@ -4,6 +4,10 @@ class NightmareCodeEditor {
         this.voiceMode = null;
         this.voiceStopRequested = false;
         this.voicePrivacyNotified = false;
+        this.localDictationEnabled = false;
+        this.localDictationRecorder = null;
+        this.localDictationStream = null;
+        this.localDictationRecords = new WeakMap();
         this.glassesModeManuallySet = false;
         this.externalDisplayActive = false;
         this.processEventBuffer = new Map();
@@ -29,6 +33,10 @@ class NightmareCodeEditor {
         document.getElementById('aiReplaceBtn')?.addEventListener('click', () => this.applyAIResponse(true));
         document.getElementById('aiApplyWorkspaceBtn')?.addEventListener('click', () => this.applyWorkspaceEdits());
         document.getElementById('stopProcessBtn')?.addEventListener('click', () => this.stopWorkspaceProcess());
+        document.getElementById('localDictationToggle')?.addEventListener('change', (event) => this.setLocalDictationEnabled(event));
+        window.desktopApp?.onDictationProgress?.((status) => {
+            if (typeof status === 'string') this.setVoiceStatus(status);
+        });
         window.desktopApp?.onProcessOutput?.((result) => this.appendProcessOutput(result));
         window.desktopApp?.onProcessComplete?.((result) => this.finishWorkspaceProcess(result));
         window.desktopApp?.onDecompilerProgress?.((progress) => {
@@ -41,6 +49,10 @@ class NightmareCodeEditor {
         });
         if (!window.desktopApp?.setUnrestrictedTerminalEnabled) {
             const toggle = document.getElementById('unrestrictedTerminalToggle');
+            if (toggle) toggle.disabled = true;
+        }
+        if (!window.desktopApp?.prepareLocalDictation || !window.desktopApp?.transcribeLocalAudio) {
+            const toggle = document.getElementById('localDictationToggle');
             if (toggle) toggle.disabled = true;
         }
         document.addEventListener('keydown', (event) => this.handleShortcuts(event));
@@ -578,11 +590,16 @@ class NightmareCodeEditor {
 
     toggleVoice(mode) {
         if (this.voiceMode === mode) {
-            this.stopVoiceRecognition();
+            if (mode === 'dictation' && this.localDictationRecorder) this.stopLocalDictation();
+            else this.stopVoiceRecognition();
             return;
         }
 
         this.stopVoiceRecognition();
+        if (mode === 'dictation' && this.localDictationEnabled) {
+            this.startLocalDictation();
+            return;
+        }
         const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!Recognition) {
             this.showNotification('Speech recognition is not available on this platform.');
@@ -639,6 +656,9 @@ class NightmareCodeEditor {
 
     stopVoiceRecognition() {
         this.voiceStopRequested = true;
+        if (this.localDictationRecorder) {
+            this.stopLocalDictation(true);
+        }
         const recognition = this.voiceRecognition;
         this.voiceRecognition = null;
         this.voiceMode = null;
@@ -655,6 +675,149 @@ class NightmareCodeEditor {
             }
         }
         this.setVoiceStatus('Voice off');
+    }
+
+    async setLocalDictationEnabled(event) {
+        const toggle = event.currentTarget;
+        if (!toggle.checked) {
+            this.localDictationEnabled = false;
+            if (this.localDictationRecorder) this.stopLocalDictation(true);
+            return;
+        }
+        if (!window.desktopApp?.prepareLocalDictation) {
+            toggle.checked = false;
+            this.showNotification('Local Parakeet dictation is available only in the desktop app.');
+            return;
+        }
+        toggle.disabled = true;
+        this.setVoiceStatus('Setting up local dictation…');
+        try {
+            const prepared = await window.desktopApp.prepareLocalDictation();
+            if (!prepared) {
+                toggle.checked = false;
+                this.setVoiceStatus('Voice off');
+                return;
+            }
+            this.localDictationEnabled = true;
+            this.setVoiceStatus('Local Parakeet ready');
+        } catch (error) {
+            toggle.checked = false;
+            this.setVoiceStatus('Voice off');
+            this.showNotification(`Could not enable local dictation: ${error.message}`);
+        } finally {
+            toggle.disabled = false;
+        }
+    }
+
+    async startLocalDictation() {
+        if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+            this.showNotification('Local microphone recording is not available on this platform.');
+            return;
+        }
+        this.voiceMode = 'dictation';
+        this.voiceStopRequested = false;
+        this.setVoiceStatus('Requesting microphone…');
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (this.voiceMode !== 'dictation' || this.voiceStopRequested) {
+                stream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+            const mimeType = [
+                'audio/webm;codecs=opus',
+                'audio/ogg;codecs=opus',
+                'audio/mp4'
+            ].find((type) => MediaRecorder.isTypeSupported(type));
+            const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+            const recording = { stream, chunks: [], bytes: 0, discard: false, tooLarge: false };
+            this.localDictationRecords.set(recorder, recording);
+            this.localDictationStream = stream;
+            this.localDictationRecorder = recorder;
+            recorder.ondataavailable = (event) => {
+                if (!event.data?.size) return;
+                recording.bytes += event.data.size;
+                if (recording.bytes > 25 * 1024 * 1024) {
+                    recording.tooLarge = true;
+                    this.setVoiceStatus('Recording limit reached; stopping…');
+                    if (recorder.state !== 'inactive') recorder.stop();
+                    return;
+                }
+                recording.chunks.push(event.data);
+            };
+            recorder.onerror = () => {
+                this.showNotification('Microphone recording failed.');
+                this.stopLocalDictation(true);
+            };
+            recorder.onstop = () => {
+                stream.getTracks().forEach((track) => track.stop());
+                const wasCurrent = this.localDictationRecorder === recorder;
+                if (wasCurrent) {
+                    this.localDictationStream = null;
+                    this.localDictationRecorder = null;
+                    this.voiceMode = null;
+                }
+                if (recording.discard) {
+                    if (wasCurrent) this.setVoiceStatus('Voice off');
+                    return;
+                }
+                if (recording.tooLarge) {
+                    this.setVoiceStatus('Voice off');
+                    this.showNotification('Local recordings are limited to 25 MB. Try a shorter recording.');
+                    return;
+                }
+                void this.transcribeLocalRecording(recorder.mimeType || recording.chunks[0]?.type || '', recording.chunks);
+            };
+            recorder.start(1000);
+            this.setVoiceStatus('Local dictation recording…');
+        } catch (error) {
+            stream?.getTracks().forEach((track) => track.stop());
+            this.localDictationStream = null;
+            this.localDictationRecorder = null;
+            this.voiceMode = null;
+            this.setVoiceStatus('Voice off');
+            this.showNotification(`Could not start local dictation: ${error.message}`);
+        }
+    }
+
+    stopLocalDictation(discard = false) {
+        const recorder = this.localDictationRecorder;
+        if (!recorder) {
+            this.localDictationStream?.getTracks().forEach((track) => track.stop());
+            this.localDictationStream = null;
+            this.voiceMode = null;
+            this.setVoiceStatus('Voice off');
+            return;
+        }
+        const recording = this.localDictationRecords.get(recorder);
+        if (recording) recording.discard = discard;
+        this.localDictationRecorder = null;
+        this.localDictationStream = null;
+        if (this.voiceMode === 'dictation') this.voiceMode = null;
+        if (recorder.state !== 'inactive') {
+            if (!discard) this.setVoiceStatus('Finishing local recording…');
+            recorder.stop();
+        }
+        if (discard) this.setVoiceStatus('Voice off');
+    }
+
+    async transcribeLocalRecording(mimeType, chunks) {
+        try {
+            const blob = new Blob(chunks, { type: mimeType });
+            if (!blob.size) throw new Error('No audio was captured.');
+            const audio = new Uint8Array(await blob.arrayBuffer());
+            const result = await window.desktopApp.transcribeLocalAudio(audio, mimeType.split(';')[0].toLowerCase());
+            if (result?.cancelled) {
+                this.setVoiceStatus('Voice off');
+                return;
+            }
+            if (!result || typeof result.text !== 'string') throw new Error('No transcript was returned.');
+            if (result.text) this.insertDictation(result.text);
+            this.setVoiceStatus('Voice off');
+        } catch (error) {
+            this.setVoiceStatus('Voice off');
+            this.showNotification(`Local transcription failed: ${error.message}. Uncheck local Parakeet to use browser speech recognition.`);
+        }
     }
 
     setVoiceStatus(message) {

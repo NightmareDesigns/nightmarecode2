@@ -116,7 +116,8 @@ The Windows portable executable is unsigned unless a code-signing certificate is
 7. **Voice**
    - Use the Voice menu to dictate into the editor, say built-in editor commands, or read the current file/selection aloud.
    - Microphone permission is requested only when starting dictation or voice commands.
-   - Speech recognition depends on the browser/platform provider and may send audio to a remote service; read-aloud uses the device's speech voices.
+   - On desktop, check **Use local Parakeet** to opt in to local speech-to-text. The app requires Python 3.10+ and, after native confirmation, installs the pinned `moondream==2.6.1` package and dependencies into an app-local virtual environment. On first transcription it asks before downloading about 178 MB of Parakeet Redux weights. Recordings are limited to 25 MB, processed locally, and deleted from the temporary recording directory after transcription; the package and downloaded model remain in app data. Python and the installed package run with your user permissions.
+   - Leave local Parakeet unchecked to use browser/platform speech recognition, which may send audio to its provider. Local Parakeet is unavailable in browser and Android builds; read-aloud uses the device's speech voices.
 
 ## File Structure
 
@@ -126,6 +127,7 @@ nightmarecode2/
 ├── main.js                 # Electron IPC, workspace access, and window lifecycle
 ├── preload.js              # Context-isolated IPC bridge
 ├── decompiler.js           # Pinned tools, verified acquisition, and local execution
+├── parakeet.js             # Optional local Parakeet runtime and transcription
 ├── css/
 │   └── style.css          # All styling and theming
 ├── js/

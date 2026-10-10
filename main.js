@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 const { createHash, randomUUID } = require('crypto');
 const { pathToFileURL } = require('url');
 const decompiler = require('./decompiler');
+const parakeet = require('./parakeet');
 
 const MAX_TEXT_FILE_SIZE = 2 * 1024 * 1024;
 const MAX_WORKSPACE_ENTRIES = 10000;
@@ -19,6 +20,9 @@ let decompilationActive = false;
 let unrestrictedTerminalEnabled = false;
 let terminalShell = null;
 let terminalOutputLength = 0;
+let parakeetSetupAllowedForSession = false;
+let parakeetModelAllowedForSession = false;
+let parakeetOperationActive = false;
 const openedFiles = new Map();
 const activeProcesses = new Map();
 const MAX_AI_PROMPT_LENGTH = 16000;
@@ -385,6 +389,72 @@ ipcMain.handle('decompiler:run', async (event, request) => {
   }
 });
 
+ipcMain.handle('dictation:prepare-local', async (event) => {
+  assertTrustedSender(event);
+  if (parakeetOperationActive) throw new Error('Local dictation setup or transcription is already running.');
+  parakeetOperationActive = true;
+  try {
+    if (!parakeetSetupAllowedForSession) {
+      const consent = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Enable local Parakeet dictation?',
+        message: 'Set up local speech-to-text?',
+        detail: 'If needed, the app will create a Python virtual environment in app data and install the pinned moondream 2.6.1 package and its dependencies from PyPI. Python 3.10 or newer must already be installed. The package runs with your user permissions; no recording is uploaded.',
+        buttons: ['Set up local dictation', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1
+      });
+      if (consent.response !== 0) return false;
+      parakeetSetupAllowedForSession = true;
+    }
+    await parakeet.prepare(app.getPath('userData'), (status) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('dictation:progress', status);
+    });
+    return true;
+  } finally {
+    parakeetOperationActive = false;
+  }
+});
+
+ipcMain.handle('dictation:transcribe-local', async (event, audio, mimeType) => {
+  assertTrustedSender(event);
+  if (parakeetOperationActive) throw new Error('Local dictation setup or transcription is already running.');
+  if (!(audio instanceof Uint8Array) || audio.byteLength === 0 || audio.byteLength > parakeet.MAX_AUDIO_BYTES) {
+    throw new Error('Recording is empty or exceeds the 25 MB limit.');
+  }
+  const allowedMimeTypes = new Set(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/wav', 'audio/mpeg']);
+  if (typeof mimeType !== 'string' || !allowedMimeTypes.has(mimeType)) {
+    throw new Error('This recording format is not supported for local transcription.');
+  }
+  if (!parakeetSetupAllowedForSession) throw new Error('Enable local Parakeet in the Voice menu first.');
+  parakeetOperationActive = true;
+  try {
+    if (!parakeetModelAllowedForSession) {
+      const consent = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        title: 'Download Parakeet Redux?',
+        message: 'Run local transcription with Parakeet Redux?',
+        detail: 'On first use, the app downloads about 178 MB of Parakeet Redux model weights from its publisher. Your recording remains on this computer and is not sent to an AI service.',
+        buttons: ['Continue locally', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1
+      });
+      if (consent.response !== 0) return { cancelled: true };
+      parakeetModelAllowedForSession = true;
+    }
+    await parakeet.prepare(app.getPath('userData'), (status) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('dictation:progress', status);
+    });
+    const recording = Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength);
+    const text = await parakeet.transcribe(app.getPath('userData'), recording, mimeType, (status) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('dictation:progress', status);
+    });
+    return { text };
+  } finally {
+    parakeetOperationActive = false;
+  }
+});
+
 function getMainWindowDisplayInfo() {
   if (!mainWindow || mainWindow.isDestroyed()) return { external: false };
   const displays = screen.getAllDisplays();
@@ -574,4 +644,5 @@ app.on('before-quit', () => {
   for (const child of activeProcesses.values()) child.kill();
   activeProcesses.clear();
   decompiler.stopAll();
+  parakeet.stopAll();
 });

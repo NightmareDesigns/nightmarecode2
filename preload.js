@@ -23,6 +23,14 @@ contextBridge.exposeInMainWorld('desktopApp', {
   stopWorkspaceProcess: (jobId) => ipcRenderer.invoke('process:stop', jobId),
   setUnrestrictedTerminalEnabled: (enabled) => ipcRenderer.invoke('terminal:set-enabled', enabled),
   writeTerminalCommand: (command) => ipcRenderer.invoke('terminal:write', command),
+  prepareLocalDictation: () => ipcRenderer.invoke('dictation:prepare-local'),
+  transcribeLocalAudio: (audio, mimeType) => ipcRenderer.invoke('dictation:transcribe-local', audio, mimeType),
+  onDictationProgress: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on('dictation:progress', listener);
+    return () => ipcRenderer.removeListener('dictation:progress', listener);
+  },
   onTerminalOutput: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, result) => callback(result);

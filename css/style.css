@@ -100,6 +100,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     cursor: pointer;
 }
 .dropdown-menu button span { color: var(--muted-color); }
+.dropdown-menu .voice-opt-in {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    color: var(--text-color);
+    cursor: pointer;
+}
+.voice-opt-in input { accent-color: var(--primary-color); }
 .window-status {
     margin-left: auto;
     max-width: 35vw;
