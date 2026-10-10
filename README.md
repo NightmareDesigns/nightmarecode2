@@ -53,6 +53,20 @@ cd nightmarecode2
    local draft recovery and downloads saved files; workspace folder access is available
    only in the Electron app.
 
+### Build installers
+
+- **Windows portable EXE:** run `npm run package` on Windows.
+  Produces `dist/NightmareDesignsCode-0.1.0-portable.exe` (x64, no installer required).
+- **macOS DMG / Linux AppImage:** `npm run dist` on the corresponding operating system.
+- **Android debug APK:** `./android/gradlew -p android assembleDebug` (macOS/Linux) or
+  `android\gradlew.bat -p android assembleDebug` (Windows). The APK is written to
+  `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+The Android build requires JDK 17+, Android SDK Platform 35, and network access on
+the first build so the Gradle wrapper and Android Gradle Plugin can be downloaded.
+The debug APK is suitable for installation/testing; a signed release APK needs a
+developer-owned signing key.
+
 ### Usage
 
 1. **Create a New File**
@@ -62,7 +76,7 @@ cd nightmarecode2
 2. **Edit Code**
    - Click any file in the Explorer to switch to it
    - Or click its tab at the top
-   - Type your code with syntax highlighting
+   - Type code in the plain-text editor; file types are identified in the status bar
 
 3. **Save Your Work**
    - Use `Ctrl+S` / `Cmd+S` to save to the open workspace (desktop) or download the file (browser)
@@ -90,6 +104,7 @@ nightmarecode2/
 │   ├── matrix.js          # Matrix background animation
 │   ├── filemanager.js     # File management system
 │   └── editor.js          # Editor core functionality
+├── android/               # Android APK wrapper and Gradle build
 └── README.md              # This file
 ```
 
@@ -122,17 +137,22 @@ Extend the `getFileType()` method in `js/filemanager.js` to support more file ty
 
 ## Platform Support
 
-- Windows desktop: portable x64 package
+- Windows desktop: standalone portable x64 EXE
 - macOS desktop: DMG package
 - Linux desktop: AppImage package
+- Android: installable APK with file picker and Save dialog
 - Browser mode: recent desktop browsers; folder access depends on browser support and is currently not enabled
-- Android app development/building: not supported yet; Android SDK/Gradle integration or a remote build service is still needed
+- Samsung DeX: the Android activity is resizable for DeX windowed use and physical keyboard input
+- XREAL glasses: the APK is a regular 2D Android app and can be shown when the connected phone/DeX setup routes its display to the glasses; there is no XREAL spatial SDK integration
 
-Build packages on the corresponding operating system with `npm run dist`. Android is not an Electron desktop target.
+The APK has not been tested on physical Samsung DeX or XREAL hardware. Display output depends on the phone, adapter, and glasses supporting the required USB-C DisplayPort path.
+
+Build Electron packages on the corresponding operating system with `npm run dist`. Android is a separate native WebView wrapper, not an Electron target.
 
 ## Safety and Current Limitations
 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
+- The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
 - The terminal is simulated. No build, run, plugin, or generated-code commands are executed.
 - There is no AI provider/agent, plugin marketplace, Language Server Protocol integration, debugger, real syntax highlighter, or decompiler yet.
 - A production plugin or AI-agent system needs provider/marketplace decisions, explicit permissions, command approval, and stronger process isolation before enabling execution.

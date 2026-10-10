@@ -7,6 +7,8 @@ class FileManager {
         this.workspaceFiles = [];
         this.desktop = Boolean(window.desktopApp?.isDesktop);
         this.saveTimer = null;
+        this.mobileSaveSequence = 0;
+        this.pendingMobileSaves = new Map();
         this.init();
         window.fileManager = this;
     }
@@ -415,6 +417,9 @@ class FileManager {
             } else if (this.desktop) {
                 await this.saveAs();
                 return;
+            } else if (window.androidApp) {
+                this.requestMobileSave(this.currentFile, file, content, !file.isWorkspaceFile);
+                return;
             } else {
                 this.downloadFile(this.currentFile, content);
             }
@@ -434,6 +439,10 @@ class FileManager {
         if (!file) return;
         this.captureCurrentContent();
         if (!this.desktop) {
+            if (window.androidApp) {
+                this.requestMobileSave(this.currentFile, file, file.content, !file.isWorkspaceFile);
+                return;
+            }
             this.downloadFile(this.currentFile, file.content);
             return;
         }
@@ -457,6 +466,33 @@ class FileManager {
             this.notify(`Saved ${result.name}`);
         } catch (error) {
             this.notify(`Could not save file: ${error.message}`);
+        }
+    }
+
+    requestMobileSave(fileName, file, content, markClean) {
+        const requestId = ++this.mobileSaveSequence;
+        this.pendingMobileSaves.set(requestId, { fileName, content, markClean });
+        this.setStatus('Choose a save location');
+        window.androidApp.saveTextFile(fileName, content, requestId);
+    }
+
+    handleMobileSaveResult(requestId, saved) {
+        const pending = this.pendingMobileSaves.get(requestId);
+        if (!pending) return;
+        this.pendingMobileSaves.delete(requestId);
+        const file = this.files[pending.fileName];
+        if (saved && pending.markClean && file && file.content === pending.content) {
+            file.dirty = false;
+            this.saveFiles();
+            this.updateTabs();
+            this.setStatus('Saved');
+            this.notify(`Saved ${pending.fileName}`);
+        } else if (saved) {
+            this.setStatus('Saved a copy; workspace changes remain unsaved');
+            this.notify('Saved a copy. The workspace file still needs saving.');
+        } else {
+            this.setStatus('Save canceled or failed', true);
+            this.notify('Save canceled or failed; your draft is still available.');
         }
     }
 
