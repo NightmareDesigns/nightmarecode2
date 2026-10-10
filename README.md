@@ -11,7 +11,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - File type detection for common programming languages and configuration formats
 - Line numbers and code statistics in the status bar
 - Build and Run for JavaScript and Python files in desktop workspaces, with explicit execution consent
-- OpenAI-compatible coding assistant for local model servers or HTTPS API endpoints
+- OpenAI-compatible coding assistant for local model servers or HTTPS API endpoints, with reviewable workspace edits
 - Syntax highlighting for supported languages
 - Voice menu for speech-to-text dictation, built-in editor commands, and read-aloud
 
@@ -99,7 +99,9 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - Open the AI assistant tab and enter an OpenAI-compatible chat-completions endpoint and model.
    - The default endpoint/model target a local Ollama-compatible server. Remote endpoints must use HTTPS.
    - API keys remain in memory in the open window and are not saved. The current file is sent only when you check “Include current file.”
-   - Review the answer, select code to replace if desired, and use Insert or Replace Selection to apply it.
+   - Ask/Insert/Replace continue to work for individual-file suggestions. To request workspace edits, enable “Propose edits to workspace files” and enter one or more exact workspace-relative paths (one per line); leaving paths blank uses the current workspace file. Only the selected text files are sent, with a 50,000-character total context limit, a 20-file limit, and a 50,000-character per-file limit.
+   - Workspace proposals are returned as complete-file replacements and shown for review before the explicit Apply action. Paths must already be listed in the open workspace. Apply detects files changed since the request and refuses stale proposals. Auto-approve is off by default; opting in writes valid proposals immediately, but never runs or builds code.
+   - Prompts and selected file contents go to the configured model endpoint. Only the desktop app has the AI and workspace IPC bridges; browser/Android mode reports this limitation and retains ordinary file editing.
 
 7. **Voice**
    - Use the Voice menu to dictate into the editor, say built-in editor commands, or read the current file/selection aloud.
@@ -171,9 +173,9 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 - Arbitrary terminal shell commands are not supported. Build/Run currently accepts only JavaScript and Python workspace files.
 - Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
-- The AI assistant calls one configured OpenAI-compatible model per request; it is not an autonomous coding agent and cannot operate tools. Local model-server availability depends on installing/configuring that server separately.
-- AI/API settings are available only in the desktop build; Android currently has no AI bridge.
-- There is no plugin marketplace, Language Server Protocol integration, debugger, or decompiler yet.
+- The AI assistant makes one model request at a time; workspace edits are constrained to explicitly selected, listed paths and are not an autonomous shell/tool agent. Local model-server availability depends on installing/configuring that server separately.
+- AI/API and workspace-edit bridges are desktop-only; browser and Android have no AI bridge.
+- There is no plugin marketplace, Language Server Protocol integration, debugger, or decompiler backend. Automatic acquisition/building of decompiler tools for the requested formats is not implemented by the renderer; it requires a separate backend/decompiler change.
 - An autonomous AI agent or plugin system needs explicit permissions and stronger process isolation before it can execute tools.
 - Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
 
@@ -212,7 +214,7 @@ Requires browser support for:
 - [ ] Permissioned plugin system and trusted marketplace support
 - [ ] Configurable local/cloud AI coding agent with reviewable diffs and checkpoints
 - [ ] Sandboxed build and run tools with explicit user approval
-- [ ] Safe, format-scoped decompiler support
+- [ ] Decompiler backend for supported formats, including automatic acquisition/build of required tools
 - [ ] Split editor view
 - [ ] Arbitrary terminal shell with safe sandbox support
 

@@ -269,10 +269,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .ai-settings label { display: flex; min-width: 0; flex-direction: column; gap: 3px; color: var(--muted-color); font-size: 10px; }
 .ai-settings input:not([type="checkbox"]) { width: 100%; padding: 5px 6px; border: 1px solid #29312d; background: #090d0b; color: var(--text-color); font-size: 11px; }
 .ai-settings .ai-context-toggle { flex-direction: row; align-items: center; grid-column: 1 / -1; }
+.ai-settings .ai-workspace-paths { align-items: stretch; flex-direction: column; }
+.ai-workspace-paths textarea { min-height: 38px; resize: vertical; border: 1px solid #29312d; padding: 5px 6px; background: #090d0b; color: var(--text-color); font: inherit; }
 .ai-prompt { min-height: 48px; max-height: 90px; margin: 0 12px; padding: 7px; resize: vertical; border: 1px solid #29312d; background: #090d0b; color: var(--text-color); }
 .ai-actions { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 12px; }
 .ai-response { flex: 1; min-height: 40px; overflow: auto; margin: 0 12px; padding: 7px; border: 1px solid #202622; white-space: pre-wrap; overflow-wrap: anywhere; color: #d7e7da; }
 .ai-response:empty { display: none; }
+.ai-workspace-review { max-height: 145px; overflow: auto; margin: 0 12px 8px; color: #d7e7da; font-size: 11px; overflow-wrap: anywhere; }
+.ai-workspace-review:empty { display: none; }
+.ai-workspace-review details { margin-top: 5px; border: 1px solid #29312d; }
+.ai-workspace-review summary { padding: 5px; cursor: pointer; color: var(--primary-color); }
+.ai-workspace-review pre { max-height: 220px; overflow: auto; margin: 0; padding: 7px; white-space: pre-wrap; overflow-wrap: anywhere; background: #090d0b; }
 .ai-actions .quiet-button:disabled { opacity: .5; cursor: not-allowed; }
 .notification { position: fixed; z-index: 10; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); padding: 10px 14px; border: 1px solid var(--border-color); background: #0c110e; color: var(--text-color); opacity: 0; transform: translateY(6px); transition: opacity .15s, transform .15s; pointer-events: none; }
 .notification.visible { opacity: 1; transform: translateY(0); }

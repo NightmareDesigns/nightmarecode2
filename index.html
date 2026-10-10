@@ -156,6 +156,11 @@
                             <input id="aiApiKey" type="password" placeholder="Optional for local models" autocomplete="off">
                         </label>
                         <label class="ai-context-toggle"><input id="aiIncludeFile" type="checkbox"> Include current file in request</label>
+                        <label class="ai-context-toggle"><input id="aiWorkspaceEdit" type="checkbox"> Propose edits to workspace files (desktop)</label>
+                        <label class="ai-context-toggle ai-workspace-paths" for="aiWorkspacePaths">Workspace paths to read/edit (one per line; blank uses the current workspace file)
+                            <textarea id="aiWorkspacePaths" rows="2" maxlength="2000" placeholder="src/app.js"></textarea>
+                        </label>
+                        <label class="ai-context-toggle"><input id="aiAutoApprove" type="checkbox"> Auto-approve workspace edits (writes changes; never runs code)</label>
                     </div>
                     <label class="visually-hidden" for="aiPrompt">Ask the coding assistant</label>
                     <textarea id="aiPrompt" class="ai-prompt" maxlength="16000" placeholder="Ask a question or request an edit…"></textarea>
@@ -163,7 +168,9 @@
                         <button id="aiSendBtn" class="quiet-button" type="button">Ask model</button>
                         <button id="aiInsertBtn" class="quiet-button" type="button" disabled>Insert at cursor</button>
                         <button id="aiReplaceBtn" class="quiet-button" type="button" disabled>Replace selection</button>
+                        <button id="aiApplyWorkspaceBtn" class="quiet-button" type="button" disabled>Review and apply workspace edits</button>
                     </div>
+                    <div id="aiWorkspaceReview" class="ai-workspace-review" aria-live="polite"></div>
                     <div id="aiResponse" class="ai-response" aria-live="polite"></div>
                     <div class="terminal-notice">Prompts and checked file context go to the configured endpoint. Keys are not saved. Review every suggestion before applying.</div>
                 </div>

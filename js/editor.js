@@ -24,6 +24,7 @@ class NightmareCodeEditor {
         document.getElementById('aiSendBtn')?.addEventListener('click', () => this.askAI());
         document.getElementById('aiInsertBtn')?.addEventListener('click', () => this.applyAIResponse(false));
         document.getElementById('aiReplaceBtn')?.addEventListener('click', () => this.applyAIResponse(true));
+        document.getElementById('aiApplyWorkspaceBtn')?.addEventListener('click', () => this.applyWorkspaceEdits());
         document.getElementById('stopProcessBtn')?.addEventListener('click', () => this.stopWorkspaceProcess());
         window.desktopApp?.onProcessOutput?.((result) => this.appendProcessOutput(result));
         window.desktopApp?.onProcessComplete?.((result) => this.finishWorkspaceProcess(result));
@@ -221,8 +222,12 @@ class NightmareCodeEditor {
     async askAI() {
         const response = document.getElementById('aiResponse');
         const sendButton = document.getElementById('aiSendBtn');
+        const review = document.getElementById('aiWorkspaceReview');
+        const workspaceEdit = document.getElementById('aiWorkspaceEdit').checked;
+        const autoApprove = document.getElementById('aiAutoApprove').checked;
         if (!window.desktopApp?.completeWithAI) {
-            response.textContent = 'The AI assistant is available in the desktop app only.';
+            response.textContent = 'AI requests need the desktop app bridge. Browser and Android can still edit files, but do not have this AI connection.';
+            if (workspaceEdit) review.textContent = 'Workspace AI edits require the desktop workspace bridge.';
             return;
         }
         const prompt = document.getElementById('aiPrompt').value.trim();
@@ -231,13 +236,33 @@ class NightmareCodeEditor {
             return;
         }
         const manager = window.fileManager;
-        const context = document.getElementById('aiIncludeFile').checked && manager?.currentFile
-            ? `File: ${manager.currentFile}\n\n${document.getElementById('codeEditor').value}`
-            : '';
+        let context = '';
+        let baselines = null;
+        this.lastWorkspaceEdit = null;
+        review.replaceChildren();
+        document.getElementById('aiApplyWorkspaceBtn').disabled = true;
+        if (sendButton) sendButton.disabled = true;
+        if (workspaceEdit) {
+            try {
+                const workspaceContext = await this.getWorkspaceAIContext(manager);
+                context = workspaceContext.context;
+                baselines = workspaceContext.baselines;
+            } catch (error) {
+                response.textContent = error.message;
+                if (sendButton) sendButton.disabled = false;
+                return;
+            }
+        } else if (document.getElementById('aiIncludeFile').checked && manager?.currentFile) {
+            context = `File: ${manager.currentFile}\n\n${document.getElementById('codeEditor').value}`;
+        }
         if (context.length > 50000) {
-            response.textContent = 'The current file exceeds the 50,000-character context limit.';
+            response.textContent = 'The selected context exceeds the 50,000-character limit. Select fewer or smaller files.';
+            if (sendButton) sendButton.disabled = false;
             return;
         }
+        const requestPrompt = workspaceEdit
+            ? `${prompt}\n\nReturn only valid JSON in this exact shape: {"edits":[{"path":"exact workspace-relative path","content":"complete replacement file text"}]}. Include only files that need changes. Do not use markdown fences. Do not request or perform code execution.`
+            : prompt;
         if (sendButton) sendButton.disabled = true;
         response.textContent = 'Waiting for the configured model…';
         try {
@@ -245,19 +270,175 @@ class NightmareCodeEditor {
                 endpoint: document.getElementById('aiEndpoint').value.trim(),
                 model: document.getElementById('aiModel').value.trim(),
                 apiKey: document.getElementById('aiApiKey').value,
-                prompt,
+                prompt: requestPrompt,
                 context
             });
             response.textContent = this.lastAIResponse;
             document.getElementById('aiInsertBtn').disabled = false;
             document.getElementById('aiReplaceBtn').disabled = false;
+            if (workspaceEdit) {
+                this.lastWorkspaceEdit = this.parseWorkspaceEdits(this.lastAIResponse, baselines, manager);
+                this.renderWorkspaceEditReview(this.lastWorkspaceEdit);
+                document.getElementById('aiApplyWorkspaceBtn').disabled = this.lastWorkspaceEdit.edits.length === 0;
+                if (autoApprove && this.lastWorkspaceEdit.edits.length) {
+                    await this.applyWorkspaceEdits(true);
+                }
+            }
         } catch (error) {
             this.lastAIResponse = '';
             response.textContent = `Request failed: ${error.message}`;
             document.getElementById('aiInsertBtn').disabled = true;
             document.getElementById('aiReplaceBtn').disabled = true;
+            if (workspaceEdit) review.textContent = `No workspace changes were applied: ${error.message}`;
         } finally {
             if (sendButton) sendButton.disabled = false;
+        }
+    }
+
+    async getWorkspaceAIContext(manager) {
+        if (!manager?.workspaceName || !window.desktopApp?.readWorkspaceFile || !window.desktopApp?.writeWorkspaceFile) {
+            throw new Error('Workspace edits need an open desktop workspace with read/write access. Use Ask/Insert/Replace for browser or Android editing.');
+        }
+        const pathInput = document.getElementById('aiWorkspacePaths').value.trim();
+        const paths = pathInput
+            ? pathInput.split(/\r?\n/).map((path) => path.trim()).filter(Boolean)
+            : (manager.files[manager.currentFile]?.isWorkspaceFile ? [manager.currentFile] : []);
+        if (!paths.length) throw new Error('Enter one or more workspace-relative paths, or open a workspace file and leave this field blank.');
+        if (paths.length > 20) throw new Error('Select at most 20 workspace files per request.');
+        const knownFiles = new Set((manager.workspaceFiles || []).filter((entry) => !entry.directory).map((entry) => entry.path));
+        const uniquePaths = [...new Set(paths)];
+        if (uniquePaths.length !== paths.length) throw new Error('Remove duplicate workspace paths.');
+        for (const path of paths) {
+            if (!path || path.length > 512 || path.startsWith('/') || path.includes('\\') ||
+                path.split('/').some((part) => !part || part === '.' || part === '..') || !knownFiles.has(path)) {
+                throw new Error(`Not an available workspace-relative file: ${path}`);
+            }
+        }
+
+        const baselines = Object.create(null);
+        const sections = [];
+        let length = 0;
+        for (const path of paths) {
+            const diskContent = await window.desktopApp.readWorkspaceFile(path);
+            if (typeof diskContent !== 'string') throw new Error(`Could not read workspace text file: ${path}`);
+            const editorContent = manager.currentFile === path
+                ? document.getElementById('codeEditor').value
+                : (manager.files[path]?.loaded ? manager.files[path].content : diskContent);
+            if (editorContent.length > 50000 || diskContent.length > 50000) {
+                throw new Error(`${path} exceeds the 50,000-character per-file context limit.`);
+            }
+            baselines[path] = { content: editorContent, diskContent };
+            const section = `File: ${path}\n${editorContent}`;
+            length += section.length + 2;
+            if (length > 50000) throw new Error('Selected workspace files exceed the 50,000-character total context limit. Select fewer or smaller files.');
+            sections.push(section);
+        }
+        return { context: sections.join('\n\n'), baselines };
+    }
+
+    parseWorkspaceEdits(response, baselines, manager) {
+        if (typeof response !== 'string' || response.length > 150000) {
+            throw new Error('The model response exceeds the 150,000-character proposal limit. No files were changed.');
+        }
+        const jsonText = response.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+        let proposal;
+        try {
+            proposal = JSON.parse(jsonText);
+        } catch {
+            throw new Error('The model response was not valid workspace-edit JSON. No files were changed.');
+        }
+        if (!proposal || !Array.isArray(proposal.edits) || proposal.edits.length > 20) {
+            throw new Error('The model response must contain an edits array with at most 20 entries. No files were changed.');
+        }
+        const allowedPaths = new Set(Object.keys(baselines));
+        const seen = new Set();
+        let outputLength = 0;
+        const edits = proposal.edits.map((edit) => {
+            if (!edit || typeof edit.path !== 'string' || typeof edit.content !== 'string' ||
+                !allowedPaths.has(edit.path) || seen.has(edit.path)) {
+                throw new Error('The model proposed an invalid, duplicate, or unrequested path. No files were changed.');
+            }
+            if (edit.path.startsWith('/') || edit.path.includes('\\') ||
+                edit.path.split('/').some((part) => !part || part === '.' || part === '..')) {
+                throw new Error(`Unsafe workspace path in model response: ${edit.path}`);
+            }
+            if (edit.content.length > 50000) throw new Error(`${edit.path} exceeds the 50,000-character output limit.`);
+            outputLength += edit.content.length;
+            if (outputLength > 100000) throw new Error('Proposed workspace output exceeds the 100,000-character total limit.');
+            seen.add(edit.path);
+            return { path: edit.path, content: edit.content, original: baselines[edit.path].content, diskContent: baselines[edit.path].diskContent };
+        });
+        if (!manager?.workspaceName || !window.desktopApp?.writeWorkspaceFile) {
+            throw new Error('Workspace writing is unavailable. No files were changed.');
+        }
+        return { edits };
+    }
+
+    renderWorkspaceEditReview(proposal) {
+        const review = document.getElementById('aiWorkspaceReview');
+        review.replaceChildren();
+        if (!proposal.edits.length) {
+            review.textContent = 'The model proposed no file changes.';
+            return;
+        }
+        const heading = document.createElement('strong');
+        heading.textContent = `Proposed changes (${proposal.edits.length}) — review before applying`;
+        review.appendChild(heading);
+        for (const edit of proposal.edits) {
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.textContent = edit.path;
+            const preview = document.createElement('pre');
+            preview.textContent = `--- current\n${edit.original}\n\n+++ proposed\n${edit.content}`;
+            details.append(summary, preview);
+            review.appendChild(details);
+        }
+    }
+
+    async applyWorkspaceEdits(autoApproved = false) {
+        const proposal = this.lastWorkspaceEdit;
+        const manager = window.fileManager;
+        if (!proposal?.edits.length) return;
+        if (!manager?.workspaceName || !window.desktopApp?.readWorkspaceFile || !window.desktopApp?.writeWorkspaceFile) {
+            this.showNotification('Workspace write access is unavailable; no files were changed.');
+            return;
+        }
+        if (!autoApproved && !confirm(`Apply ${proposal.edits.length} reviewed workspace edit(s)?\n\nThis writes files only. It will not build or run code.`)) return;
+        try {
+            for (const edit of proposal.edits) {
+                const currentDisk = await window.desktopApp.readWorkspaceFile(edit.path);
+                const currentEditor = manager.currentFile === edit.path
+                    ? document.getElementById('codeEditor').value
+                    : (manager.files[edit.path]?.loaded ? manager.files[edit.path].content : edit.original);
+                if (currentDisk !== edit.diskContent || currentEditor !== edit.original) {
+                    throw new Error(`${edit.path} changed after the proposal. Ask the model again to avoid overwriting newer work.`);
+                }
+            }
+            for (const edit of proposal.edits) {
+                await window.desktopApp.writeWorkspaceFile(edit.path, edit.content);
+                const file = manager.files[edit.path];
+                if (file) {
+                    file.content = edit.content;
+                    file.loaded = true;
+                    file.dirty = false;
+                }
+            }
+            if (proposal.edits.some((edit) => edit.path === manager.currentFile)) {
+                const editor = document.getElementById('codeEditor');
+                editor.value = manager.files[manager.currentFile].content;
+                manager.updateEditor();
+            }
+            manager.renderFileTree?.();
+            manager.updateTabs?.();
+            document.getElementById('aiApplyWorkspaceBtn').disabled = true;
+            this.lastWorkspaceEdit = null;
+            document.getElementById('aiWorkspaceReview').prepend(document.createTextNode('Applied successfully. '));
+            this.showNotification(autoApproved ? 'Workspace edits auto-approved and written; no code was run.' : 'Workspace edits written; no code was run.');
+        } catch (error) {
+            document.getElementById('aiWorkspaceReview').prepend(document.createTextNode(`Could not apply all edits; earlier writes may have succeeded: ${error.message} `));
+            this.lastWorkspaceEdit = null;
+            document.getElementById('aiApplyWorkspaceBtn').disabled = true;
+            this.showNotification(`Workspace edits were not fully applied: ${error.message}`);
         }
     }
 
