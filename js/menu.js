@@ -108,6 +108,19 @@ class AppMenu {
             case 'build-workspace':
                 this.runDemoCommand('build workspace');
                 break;
+            case 'voice-dictation':
+                window.editorInstance?.toggleVoice('dictation');
+                break;
+            case 'voice-commands':
+                window.editorInstance?.toggleVoice('commands');
+                break;
+            case 'voice-read':
+                window.editorInstance?.readCurrentFileAloud();
+                break;
+            case 'voice-stop':
+                window.editorInstance?.stopVoiceRecognition();
+                window.editorInstance?.stopSpeaking();
+                break;
             case 'run-terminal':
                 document.querySelector('.terminal-panel')?.classList.remove('collapsed');
                 terminal?.focus();

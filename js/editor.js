@@ -13,6 +13,10 @@ class NightmareCodeEditor {
             php: { name: 'PHP', run: 'php {file}' },
             html: { name: 'HTML', run: 'open {file} (or use browser preview)' }
         };
+        this.voiceRecognition = null;
+        this.voiceMode = null;
+        this.voiceStopRequested = false;
+        this.voicePrivacyNotified = false;
         this.init();
     }
 
@@ -150,6 +154,210 @@ class NightmareCodeEditor {
         responseLine.textContent = response;
         terminal.appendChild(responseLine);
         terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    toggleVoice(mode) {
+        if (this.voiceMode === mode) {
+            this.stopVoiceRecognition();
+            return;
+        }
+
+        this.stopVoiceRecognition();
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Recognition) {
+            this.showNotification('Speech recognition is not available on this platform.');
+            return;
+        }
+
+        const recognition = new Recognition();
+        this.voiceRecognition = recognition;
+        this.voiceMode = mode;
+        this.voiceStopRequested = false;
+        recognition.lang = navigator.language || 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.onstart = () => this.setVoiceStatus(mode === 'dictation' ? 'Dictation on' : 'Voice commands on');
+        recognition.onresult = (event) => {
+            for (let index = event.resultIndex; index < event.results.length; index++) {
+                if (!event.results[index].isFinal) continue;
+                const transcript = event.results[index][0].transcript.trim();
+                if (mode === 'dictation') this.insertDictation(transcript);
+                else this.runVoiceCommand(transcript);
+            }
+        };
+        recognition.onerror = (event) => {
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                this.showNotification(`Speech recognition failed: ${event.error}`);
+            }
+            if (event.error !== 'no-speech') this.stopVoiceRecognition();
+        };
+        recognition.onend = () => {
+            if (this.voiceRecognition !== recognition || this.voiceStopRequested) return;
+            if (!this.voiceMode) return;
+            setTimeout(() => {
+                if (this.voiceRecognition !== recognition || this.voiceStopRequested) return;
+                try {
+                    recognition.start();
+                } catch {
+                    this.stopVoiceRecognition();
+                }
+            }, 250);
+        };
+
+        if (!this.voicePrivacyNotified) {
+            this.voicePrivacyNotified = true;
+            this.showNotification('Speech recognition may send audio to your browser’s speech provider; read-aloud uses device voices.');
+        }
+        this.setVoiceStatus(mode === 'dictation' ? 'Starting dictation…' : 'Starting commands…');
+        try {
+            recognition.start();
+        } catch (error) {
+            this.stopVoiceRecognition();
+            this.showNotification(`Could not start speech recognition: ${error.message}`);
+        }
+    }
+
+    stopVoiceRecognition() {
+        this.voiceStopRequested = true;
+        const recognition = this.voiceRecognition;
+        this.voiceRecognition = null;
+        this.voiceMode = null;
+        if (recognition) {
+            recognition.onend = null;
+            try {
+                recognition.stop();
+            } catch {
+                try {
+                    recognition.abort();
+                } catch {
+                    // The browser may already have stopped this recognition session.
+                }
+            }
+        }
+        this.setVoiceStatus('Voice off');
+    }
+
+    setVoiceStatus(message) {
+        const status = document.getElementById('voiceStatus');
+        if (status) status.textContent = message;
+    }
+
+    insertDictation(transcript) {
+        const editor = document.getElementById('codeEditor');
+        if (!editor || !transcript) return;
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const before = editor.value.slice(0, start);
+        const after = editor.value.slice(end);
+        const spacingBefore = before && !/\s$/.test(before) ? ' ' : '';
+        const spacingAfter = after && !/^\s/.test(after) ? ' ' : '';
+        editor.setRangeText(`${spacingBefore}${transcript}${spacingAfter}`, start, end, 'end');
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        editor.focus();
+    }
+
+    runVoiceCommand(transcript) {
+        const command = transcript.toLowerCase().replace(/[.!?]+$/g, '').trim().replace(/\s+/g, ' ');
+        const manager = window.fileManager;
+        const terminalPanel = document.querySelector('.terminal-panel');
+        const sidebar = document.querySelector('.sidebar');
+        switch (command) {
+            case 'new file':
+                manager?.createNewFile();
+                break;
+            case 'open file':
+                manager?.openFile();
+                break;
+            case 'open workspace':
+                manager?.openWorkspace();
+                break;
+            case 'save':
+            case 'save file':
+                manager?.saveCurrentFile();
+                break;
+            case 'save as':
+                manager?.saveAs();
+                break;
+            case 'show terminal':
+            case 'open terminal':
+            case 'toggle terminal':
+                terminalPanel?.classList.remove('collapsed');
+                document.getElementById('terminalInput')?.focus();
+                break;
+            case 'hide terminal':
+                terminalPanel?.classList.add('collapsed');
+                break;
+            case 'show explorer':
+            case 'toggle explorer':
+                sidebar?.classList.remove('collapsed');
+                break;
+            case 'hide explorer':
+                sidebar?.classList.add('collapsed');
+                break;
+            case 'build':
+            case 'build file':
+                this.processTerminalCommand(`build ${manager?.currentFile || ''}`);
+                break;
+            case 'build workspace':
+                this.processTerminalCommand('build workspace');
+                break;
+            case 'run':
+            case 'run file':
+                this.processTerminalCommand(`run ${manager?.currentFile || ''}`);
+                break;
+            case 'read file':
+            case 'read code':
+            case 'read current file':
+                this.readCurrentFileAloud();
+                break;
+            case 'stop speaking':
+            case 'stop audio':
+                this.stopSpeaking();
+                break;
+            case 'stop listening':
+            case 'stop voice commands':
+            case 'stop dictation':
+                this.stopVoiceRecognition();
+                break;
+            case 'undo':
+            case 'redo':
+            case 'select all': {
+                const editor = document.getElementById('codeEditor');
+                editor?.focus();
+                if (command === 'select all') editor?.select();
+                else document.execCommand(command);
+                break;
+            }
+            case 'dictation mode':
+                this.toggleVoice('dictation');
+                break;
+            default:
+                this.showNotification(`Voice command not recognized: ${transcript}`);
+        }
+    }
+
+    readCurrentFileAloud() {
+        if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+            this.showNotification('Read-aloud is not available on this platform.');
+            return;
+        }
+        const editor = document.getElementById('codeEditor');
+        if (!editor) return;
+        const selection = editor.value.slice(editor.selectionStart, editor.selectionEnd);
+        const text = (selection || editor.value).trim();
+        if (!text) {
+            this.showNotification('There is no code to read aloud.');
+            return;
+        }
+        const utterance = new SpeechSynthesisUtterance(text.slice(0, 5000));
+        utterance.lang = navigator.language || 'en-US';
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        this.showNotification(text.length > 5000 ? 'Reading the first 5,000 characters aloud.' : 'Reading aloud.');
+    }
+
+    stopSpeaking() {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
 
     showNotification(message) {

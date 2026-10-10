@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
 const { createHash, randomUUID } = require('crypto');
@@ -9,6 +9,7 @@ const MAX_WORKSPACE_ENTRIES = 10000;
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'dist', 'build']);
 let mainWindow;
 let workspaceRoot = null;
+let microphoneAllowedForSession = false;
 const openedFiles = new Map();
 
 function assertTrustedSender(event) {
@@ -168,6 +169,28 @@ function createWindow() {
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const appUrl = pathToFileURL(path.join(__dirname, 'index.html')).href;
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const audioOnly = details?.mediaTypes?.includes('audio') && !details.mediaTypes.includes('video');
+    if (webContents !== mainWindow.webContents || webContents.getURL() !== appUrl || permission !== 'media' || !audioOnly) {
+      callback(false);
+      return;
+    }
+    if (microphoneAllowedForSession) {
+      callback(true);
+      return;
+    }
+    dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: 'Microphone access',
+      message: 'Allow Nightmare Code to use the microphone for voice input?',
+      buttons: ['Allow while open', 'Deny'],
+      defaultId: 1,
+      cancelId: 1
+    }).then(({ response }) => {
+      microphoneAllowedForSession = response === 0;
+      callback(microphoneAllowedForSession);
+    }).catch(() => callback(false));
+  });
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (url !== appUrl) event.preventDefault();
   });

@@ -51,6 +51,15 @@
                 </div>
             </div>
             <div class="dropdown">
+                <button class="menu-button" type="button">Voice</button>
+                <div class="dropdown-menu">
+                    <button data-action="voice-dictation" type="button">Start/stop dictation</button>
+                    <button data-action="voice-commands" type="button">Start/stop voice commands</button>
+                    <button data-action="voice-read" type="button">Read current file aloud</button>
+                    <button data-action="voice-stop" type="button">Stop audio</button>
+                </div>
+            </div>
+            <div class="dropdown">
                 <button class="menu-button" type="button">Help</button>
                 <div class="dropdown-menu">
                     <button data-action="help-commands" type="button">Terminal help</button>
@@ -115,6 +124,7 @@
                 <span><span id="lineCount">1</span>:<span id="columnCount">1</span></span>
                 <span id="fileSize">0 B</span>
                 <span id="saveStatus" class="save-status">Ready</span>
+                <span id="voiceStatus">Voice off</span>
             </div>
             <section class="terminal-panel" aria-label="Terminal demo">
                 <div class="terminal-heading"><span>TERMINAL · SAFE DEMO MODE</span><span>Commands are simulated; nothing executes on your system.</span></div>

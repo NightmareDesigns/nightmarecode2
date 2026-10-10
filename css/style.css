@@ -60,6 +60,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .menu-group, .panel-actions { display: flex; align-items: center; gap: 4px; }
+.menu-group { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.menu-group::-webkit-scrollbar { display: none; }
 .dropdown { position: relative; }
 .menu-button, .icon-button, .quiet-button {
     border: 1px solid transparent;
@@ -225,10 +227,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 
 @media (max-width: 680px) {
     .app-menu { gap: 6px; padding: 0 7px; }
-    .brand { font-size: 11px; }
-    .menu-button { padding: 6px; }
-    .window-status { max-width: 24vw; font-size: 9px; }
+    .brand { flex: 0 0 auto; font-size: 0; }
+    .brand span { font-size: 16px; }
+    .menu-button { padding: 6px 5px; font-size: 11px; }
+    .window-status { display: none; }
     .sidebar { flex-basis: 190px; }
     .terminal-panel { flex-basis: 150px; }
     .terminal-heading span:last-child { display: none; }
+    .status-bar { gap: 8px; font-size: 9px; }
+    #voiceStatus { display: none; }
 }
