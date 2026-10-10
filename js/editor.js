@@ -18,7 +18,7 @@ class NightmareCodeEditor {
 
     init() {
         document.getElementById('toggleTerminalButton')?.addEventListener('click', () => {
-            document.querySelector('.terminal-panel')?.classList.toggle('collapsed');
+            this.toggleTerminalPanel();
         });
         document.getElementById('browserFileInput')?.addEventListener('change', (event) => this.openBrowserFile(event));
         document.getElementById('toolsTerminalTab')?.addEventListener('click', () => this.showToolsView('terminal'));
@@ -200,6 +200,18 @@ class NightmareCodeEditor {
         document.getElementById('aiView').hidden = !showAI;
         document.getElementById('toolsTerminalTab').classList.toggle('active-tool-tab', !showAI);
         document.getElementById('toolsAiTab').classList.toggle('active-tool-tab', showAI);
+    }
+
+    toggleTerminalPanel() {
+        const panel = document.querySelector('.terminal-panel');
+        if (!panel) return;
+        if (!panel.classList.contains('collapsed') &&
+            !document.getElementById('terminalView')?.hidden) {
+            panel.classList.add('collapsed');
+            return;
+        }
+        this.showToolsView('terminal');
+        panel.classList.remove('collapsed');
     }
 
     async executeWorkspaceAction(action, fileName) {

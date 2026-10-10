@@ -89,7 +89,7 @@ class AppMenu {
                 this.toggleSidebar();
                 break;
             case 'toggle-terminal':
-                document.querySelector('.terminal-panel')?.classList.toggle('collapsed');
+                window.editorInstance?.toggleTerminalPanel();
                 break;
             case 'toggle-extensions':
                 this.toggleExtensions();
@@ -153,8 +153,8 @@ class AppMenu {
                 window.editorInstance?.stopSpeaking();
                 break;
             case 'run-terminal':
-                document.querySelector('.terminal-panel')?.classList.remove('collapsed');
                 window.editorInstance?.showToolsView('terminal');
+                document.querySelector('.terminal-panel')?.classList.remove('collapsed');
                 break;
             case 'about':
                 this.showInfo(
