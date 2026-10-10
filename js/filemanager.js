@@ -5,6 +5,7 @@ class FileManager {
         this.workspaceName = '';
         this.workspaceId = null;
         this.workspaceFiles = [];
+        this.expandedDirectories = new Set();
         this.desktop = Boolean(window.desktopApp?.isDesktop);
         this.saveTimer = null;
         this.mobileSaveSequence = 0;
@@ -277,26 +278,83 @@ class FileManager {
         if (!fileTree) return;
         fileTree.replaceChildren();
         const filter = (document.getElementById('searchFiles')?.value || '').trim().toLowerCase();
-        const workspaceNames = new Set(this.workspaceFiles.map((entry) => entry.path));
-        const entries = this.workspaceFiles.filter((entry) => !entry.directory || entry.path.toLowerCase().includes(filter));
-        for (const entry of entries) {
-            if (filter && !entry.path.toLowerCase().includes(filter)) continue;
+        const entries = [...this.workspaceFiles].sort((left, right) =>
+            left.path.localeCompare(right.path, undefined, { sensitivity: 'base' }) ||
+            Number(right.directory) - Number(left.directory)
+        );
+        const matches = filter
+            ? entries.filter((entry) => entry.path.toLowerCase().includes(filter))
+            : entries;
+        const matchingDirectories = new Set(matches.filter((entry) => entry.directory).map((entry) => entry.path));
+        const visiblePaths = new Set();
+        for (const entry of matches) {
+            visiblePaths.add(entry.path);
+            const parts = entry.path.split('/');
+            for (let index = 1; index < parts.length; index++) {
+                visiblePaths.add(parts.slice(0, index).join('/'));
+            }
+        }
+        const hasMatchedDirectoryAncestor = (filePath) => {
+            const parts = filePath.split('/');
+            return parts.some((_, index) => matchingDirectories.has(parts.slice(0, index + 1).join('/')));
+        };
+        const shown = entries.filter((entry) => {
+            if (filter && !visiblePaths.has(entry.path) && !hasMatchedDirectoryAncestor(entry.path)) return false;
+            const parts = entry.path.split('/');
+            for (let index = 1; index < parts.length; index++) {
+                const parent = parts.slice(0, index).join('/');
+                if (filter && (visiblePaths.has(parent) || hasMatchedDirectoryAncestor(parent))) continue;
+                if (!this.expandedDirectories.has(parent)) return false;
+            }
+            return true;
+        });
+        if (filter && !shown.length && !Object.keys(this.files).some((name) => name.toLowerCase().includes(filter))) {
+            const empty = document.createElement('div');
+            empty.className = 'file-tree-empty';
+            empty.textContent = `No workspace files match “${filter}”.`;
+            fileTree.appendChild(empty);
+        }
+        if (!entries.length && !Object.keys(this.files).length) {
+            const empty = document.createElement('div');
+            empty.className = 'file-tree-empty';
+            empty.textContent = 'Open a folder to browse its files.';
+            fileTree.appendChild(empty);
+        }
+        for (const entry of shown) {
             const item = document.createElement('div');
             const isActive = entry.path === this.currentFile;
             item.className = `file-item${isActive ? ' active' : ''}${entry.directory ? ' directory' : ''}`;
             item.setAttribute('role', 'treeitem');
             item.setAttribute('aria-selected', String(isActive));
-            item.style.paddingLeft = `${6 + (entry.path.split('/').length - 1) * 12}px`;
+            item.tabIndex = 0;
+            item.style.setProperty('--tree-depth', String(entry.path.split('/').length - 1));
+            if (entry.directory) item.setAttribute('aria-expanded', String(filter ? true : this.expandedDirectories.has(entry.path)));
             const icon = document.createElement('span');
-            icon.className = 'file-icon';
-            icon.textContent = entry.directory ? '▸' : '📄';
+            icon.className = entry.directory ? 'file-icon directory-icon' : 'file-icon';
+            icon.textContent = entry.directory
+                ? (filter || this.expandedDirectories.has(entry.path) ? '⌄' : '›')
+                : entry.path.split('/').pop().split('.').pop().slice(0, 3).toUpperCase() || 'TXT';
             const label = document.createElement('span');
             label.className = 'file-name';
             label.textContent = entry.path.split('/').pop();
             item.append(icon, label);
-            if (!entry.directory) {
-                item.title = entry.path;
-                item.addEventListener('click', () => {
+            item.title = entry.path;
+            if (entry.directory) {
+                const toggleDirectory = () => {
+                    if (filter) return;
+                    if (this.expandedDirectories.has(entry.path)) this.expandedDirectories.delete(entry.path);
+                    else this.expandedDirectories.add(entry.path);
+                    this.renderFileTree();
+                };
+                item.addEventListener('click', toggleDirectory);
+                item.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleDirectory();
+                    }
+                });
+            } else {
+                const openFile = () => {
                     if (!this.files[entry.path]) {
                         this.files[entry.path] = {
                             name: entry.path,
@@ -307,11 +365,19 @@ class FileManager {
                         };
                     }
                     this.switchFile(entry.path);
+                };
+                item.addEventListener('click', openFile);
+                item.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openFile();
+                    }
                 });
             }
             fileTree.appendChild(item);
         }
 
+        const workspaceNames = new Set(this.workspaceFiles.filter((entry) => !entry.directory).map((entry) => entry.path));
         for (const [name, file] of Object.entries(this.files)) {
             if (file.isWorkspaceFile && workspaceNames.has(name)) continue;
             if (!name.toLowerCase().includes(filter)) continue;
@@ -320,6 +386,7 @@ class FileManager {
             item.className = `file-item${active ? ' active' : ''}`;
             item.setAttribute('role', 'treeitem');
             item.setAttribute('aria-selected', String(active));
+            item.tabIndex = 0;
             const icon = document.createElement('span');
             icon.className = 'file-icon';
             icon.textContent = '📄';
@@ -328,6 +395,12 @@ class FileManager {
             label.textContent = name;
             item.append(icon, label);
             item.addEventListener('click', () => this.switchFile(name));
+            item.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.switchFile(name);
+                }
+            });
             fileTree.appendChild(item);
         }
     }
@@ -393,6 +466,9 @@ class FileManager {
             this.workspaceName = workspace.name;
             this.workspaceId = workspace.id;
             this.workspaceFiles = workspace.files || [];
+            this.expandedDirectories = new Set(this.workspaceFiles
+                .filter((entry) => entry.directory && !entry.path.includes('/'))
+                .map((entry) => entry.path));
             let workspaceDrafts = {};
             try {
                 workspaceDrafts = JSON.parse(localStorage.getItem(`nightmare_workspace_${this.workspaceId}`) || '{}');
@@ -412,6 +488,7 @@ class FileManager {
             const first = this.workspaceFiles.find((entry) => !entry.directory);
             const label = document.getElementById('workspaceLabel');
             if (label) label.textContent = this.workspaceName;
+            window.editorInstance?.syncTerminalAvailability();
             this.renderFileTree();
             this.updateTabs();
             if (first) await this.switchFile(first.path);

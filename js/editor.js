@@ -17,10 +17,7 @@ class NightmareCodeEditor {
     }
 
     init() {
-        document.getElementById('toggleSidebar')?.addEventListener('click', () => {
-            document.querySelector('.sidebar')?.classList.toggle('collapsed');
-        });
-        document.getElementById('toggleTerminal')?.addEventListener('click', () => {
+        document.getElementById('toggleTerminalButton')?.addEventListener('click', () => {
             document.querySelector('.terminal-panel')?.classList.toggle('collapsed');
         });
         document.getElementById('browserFileInput')?.addEventListener('change', (event) => this.openBrowserFile(event));
@@ -47,22 +44,7 @@ class NightmareCodeEditor {
             if (typeof result?.enabled === 'boolean') this.setUnrestrictedTerminalUI(result.enabled);
             if (typeof result?.text === 'string') this.appendTerminalMessage(result.text);
         });
-        const terminalSupported = window.desktopApp?.isDesktop &&
-            ['win32', 'linux'].includes(window.desktopApp.platform) &&
-            window.desktopApp.architecture === 'x64';
-        if (!terminalSupported) {
-            const toggle = document.getElementById('unrestrictedTerminalToggle');
-            if (toggle) {
-                toggle.disabled = true;
-                toggle.title = 'Available in the x64 Windows or Linux desktop app.';
-            }
-            const availability = document.getElementById('terminalAvailability');
-            if (availability) {
-                availability.textContent = window.desktopApp?.isDesktop
-                    ? 'Unrestricted terminal requires the x64 Windows or Linux desktop app.'
-                    : 'Unrestricted terminal is available in the desktop app only; open a workspace to enable it.';
-            }
-        }
+        this.syncTerminalAvailability();
         if (!window.desktopApp?.prepareLocalDictation || !window.desktopApp?.transcribeLocalAudio) {
             const toggle = document.getElementById('localDictationToggle');
             if (toggle) toggle.disabled = true;
@@ -171,6 +153,25 @@ class NightmareCodeEditor {
             input.placeholder = enabled ? 'Enter a shell command' : 'Enable terminal to enter commands';
         }
         if (submit) submit.disabled = !enabled;
+    }
+
+    syncTerminalAvailability() {
+        const toggle = document.getElementById('unrestrictedTerminalToggle');
+        const availability = document.getElementById('terminalAvailability');
+        const supported = window.desktopApp?.isDesktop &&
+            ['win32', 'linux'].includes(window.desktopApp.platform) &&
+            window.desktopApp.architecture === 'x64';
+        if (toggle) {
+            toggle.disabled = !supported;
+            toggle.title = supported ? '' : 'Available in the x64 Windows or Linux desktop app.';
+        }
+        if (availability) {
+            availability.textContent = !supported
+                ? (window.desktopApp?.isDesktop
+                    ? 'Unrestricted terminal requires the x64 Windows or Linux desktop app.'
+                    : 'Unrestricted terminal is available in the desktop app only.')
+                : (window.fileManager?.workspaceName ? '' : 'Open a workspace before enabling unrestricted terminal.');
+        }
     }
 
     async submitTerminalCommand(event) {
@@ -585,7 +586,10 @@ class NightmareCodeEditor {
     }
 
     applyAIResponse(replaceSelection) {
-        if (!this.lastAIResponse) return;
+        if (!this.lastAIResponse) {
+            this.showNotification('Ask the AI assistant for a response first.');
+            return;
+        }
         const editor = document.getElementById('codeEditor');
         const start = editor.selectionStart;
         const end = editor.selectionEnd;

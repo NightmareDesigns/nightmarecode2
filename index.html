@@ -13,7 +13,7 @@
         <div class="brand"><span aria-hidden="true">🩸</span> NIGHTMARE CODE</div>
         <nav class="menu-group" aria-label="Application menu">
             <div class="dropdown">
-                <button class="menu-button" type="button">File</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">File</button>
                 <div class="dropdown-menu">
                     <button data-action="new-file" type="button">New file <span>Ctrl+N</span></button>
                     <button data-action="open-file" type="button">Open file <span>Ctrl+O</span></button>
@@ -23,28 +23,29 @@
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">Edit</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">Edit</button>
                 <div class="dropdown-menu">
                     <button data-action="undo" type="button">Undo <span>Ctrl+Z</span></button>
                     <button data-action="redo" type="button">Redo <span>Ctrl+Y</span></button>
-                    <button data-action="cut" type="button">Cut</button>
-                    <button data-action="copy" type="button">Copy</button>
-                    <button data-action="paste" type="button">Paste</button>
+                    <button data-action="cut" type="button">Cut <span>Ctrl+X</span></button>
+                    <button data-action="copy" type="button">Copy <span>Ctrl+C</span></button>
+                    <button data-action="paste" type="button">Paste <span>Ctrl+V</span></button>
                     <button data-action="select-all" type="button">Select all</button>
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">View</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">View</button>
                 <div class="dropdown-menu">
                     <button data-action="toggle-sidebar" type="button">Toggle explorer</button>
                     <button data-action="toggle-terminal" type="button">Toggle terminal</button>
+                    <button data-action="toggle-extensions" type="button">Toggle extensions</button>
                     <button data-action="focus-editor" type="button">Focus editor</button>
                     <button data-action="focus-terminal" type="button">Focus terminal</button>
                     <button data-action="toggle-glasses-mode" type="button">Toggle glasses display mode</button>
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">Build</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">Build</button>
                 <div class="dropdown-menu">
                     <button data-action="build-file" type="button">Build current file</button>
                     <button data-action="run-file" type="button">Run current file</button>
@@ -52,14 +53,14 @@
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">AI</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">AI</button>
                 <div class="dropdown-menu">
                     <button data-action="toggle-ai" type="button">Open AI assistant</button>
-                    <button data-action="ai-apply" type="button">Replace selection with response</button>
+                    <button data-action="ai-apply" type="button">Apply response to selection</button>
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">Voice</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">Voice</button>
                 <div class="dropdown-menu">
                     <button data-action="voice-dictation" type="button">Start/stop dictation</button>
                     <label class="voice-opt-in"><input id="localDictationToggle" type="checkbox"> Use local Parakeet (desktop only)</label>
@@ -69,9 +70,9 @@
                 </div>
             </div>
             <div class="dropdown">
-                <button class="menu-button" type="button">Help</button>
+                <button class="menu-button" type="button" aria-haspopup="true" aria-expanded="false">Help</button>
                 <div class="dropdown-menu">
-                    <button data-action="help-commands" type="button">Terminal help</button>
+                    <button data-action="help-commands" type="button">Help and shortcuts</button>
                     <button data-action="about" type="button">About</button>
                 </div>
             </div>
@@ -81,7 +82,7 @@
 
     <main class="app-shell">
         <nav class="activity-bar" aria-label="Activity bar">
-            <button class="activity-button active" data-action="toggle-sidebar" type="button" title="Toggle Explorer" aria-label="Toggle Explorer"><span aria-hidden="true">▤</span></button>
+            <button class="activity-button active" data-action="toggle-sidebar" type="button" title="Toggle Explorer" aria-label="Toggle Explorer" aria-pressed="true"><span aria-hidden="true">▤</span></button>
             <button class="activity-button" data-action="focus-search" type="button" title="Search workspace files" aria-label="Search workspace files"><span aria-hidden="true">⌕</span></button>
             <button class="activity-button" data-action="toggle-theme-panel" type="button" title="Appearance settings" aria-label="Appearance settings"><span aria-hidden="true">⚙</span></button>
             <div class="activity-spacer"></div>
@@ -126,10 +127,10 @@
 
         <section class="workbench">
             <div class="workbench-toolbar">
-                <button id="toggleSidebar" class="quiet-button" type="button">☰ Explorer</button>
+                <button id="toggleSidebar" class="quiet-button" data-action="toggle-sidebar" type="button">☰ Explorer</button>
                 <div class="toolbar-spacer"></div>
                 <button data-action="save-file" class="quiet-button" type="button">Save</button>
-                <button id="toggleTerminal" class="quiet-button" type="button">Terminal</button>
+                <button id="toggleTerminalButton" class="quiet-button" type="button">Terminal</button>
             </div>
             <div class="tab-container" role="tablist" aria-label="Open files"></div>
             <div id="editorBreadcrumbs" class="editor-breadcrumbs" aria-label="Current file path">No file open</div>
@@ -195,12 +196,33 @@
                 </div>
             </section>
         </section>
+        <aside id="extensionsPanel" class="extensions-panel" aria-label="Workspace extensions" hidden>
+            <div class="extensions-heading">
+                <span>EXTENSIONS</span>
+                <button class="panel-close" data-action="toggle-extensions" type="button" title="Close extensions" aria-label="Close extensions">×</button>
+            </div>
+            <div class="extensions-intro">Import local JSON snippet packs for reusable code. Packs do not run scripts or access your files.</div>
+            <button id="importExtensionButton" class="quiet-button extension-import" type="button">＋ Import snippet pack</button>
+            <input id="extensionFileInput" type="file" accept="application/json,.json" hidden>
+            <div id="extensionList" class="extension-list" aria-live="polite"></div>
+        </aside>
+        <nav class="right-activity-bar" aria-label="Right activity bar">
+            <button class="activity-button" data-action="toggle-extensions" type="button" title="Extensions and snippet packs" aria-label="Extensions and snippet packs" aria-pressed="false"><span aria-hidden="true">◈</span></button>
+        </nav>
     </main>
     <div id="notification" class="notification" role="status" aria-live="polite"></div>
     <input id="browserFileInput" type="file" hidden>
+    <dialog id="infoDialog" class="info-dialog">
+        <form method="dialog">
+            <h2 id="infoDialogTitle"></h2>
+            <div id="infoDialogContent"></div>
+            <button class="quiet-button" type="submit">Close</button>
+        </form>
+    </dialog>
     <script src="js/matrix.js"></script>
     <script src="vendor/highlight.min.js"></script>
     <script src="js/filemanager.js"></script>
+    <script src="js/extensions.js"></script>
     <script src="js/editor.js"></script>
     <script src="js/menu.js"></script>
 </body>

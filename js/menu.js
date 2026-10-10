@@ -17,13 +17,26 @@ class AppMenu {
             button.addEventListener('click', (event) => {
                 event.stopPropagation();
                 const isOpen = dropdown.classList.contains('open');
-                document.querySelectorAll('.dropdown').forEach((item) => item.classList.remove('open'));
-                if (!isOpen) dropdown.classList.add('open');
+                document.querySelectorAll('.dropdown').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
+                });
+                if (!isOpen) {
+                    dropdown.classList.add('open');
+                    button.setAttribute('aria-expanded', 'true');
+                }
             });
         });
 
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown').forEach((item) => item.classList.remove('open'));
+        const closeMenus = () => {
+            document.querySelectorAll('.dropdown').forEach((item) => {
+                item.classList.remove('open');
+                item.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
+            });
+        };
+        document.addEventListener('click', closeMenus);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeMenus();
         });
     }
 
@@ -32,7 +45,10 @@ class AppMenu {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
                 this.handleAction(action);
-                document.querySelectorAll('.dropdown').forEach((item) => item.classList.remove('open'));
+                document.querySelectorAll('.dropdown').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('.menu-button')?.setAttribute('aria-expanded', 'false');
+                });
             });
         });
     }
@@ -58,36 +74,32 @@ class AppMenu {
                 manager?.saveAs();
                 break;
             case 'undo':
-                editor?.focus();
-                document.execCommand('undo');
+                this.runEditorCommand(editor, 'undo');
                 break;
             case 'redo':
-                editor?.focus();
-                document.execCommand('redo');
+                this.runEditorCommand(editor, 'redo');
                 break;
             case 'cut':
-                editor?.focus();
-                document.execCommand('cut');
+                this.runEditorCommand(editor, 'cut', true);
                 break;
             case 'select-all':
                 editor?.focus();
                 editor?.select();
                 break;
             case 'toggle-sidebar':
-                document.querySelector('.sidebar')?.classList.toggle('collapsed');
+                this.toggleSidebar();
                 break;
             case 'toggle-terminal':
                 document.querySelector('.terminal-panel')?.classList.toggle('collapsed');
                 break;
+            case 'toggle-extensions':
+                this.toggleExtensions();
+                break;
             case 'copy':
-                editor?.focus();
-                document.execCommand('copy');
+                this.runEditorCommand(editor, 'copy', true);
                 break;
             case 'paste':
-                if (editor) {
-                    editor.focus();
-                    document.execCommand('paste');
-                }
+                void this.pasteIntoEditor(editor);
                 break;
             case 'focus-editor':
                 editor?.focus();
@@ -100,7 +112,7 @@ class AppMenu {
                 window.editorInstance?.toggleGlassesMode();
                 break;
             case 'toggle-theme-panel':
-                document.querySelector('.sidebar')?.classList.remove('collapsed');
+                this.openSidebar();
                 const settingsPanel = document.getElementById('settingsPanel');
                 if (settingsPanel) {
                     settingsPanel.open = true;
@@ -108,7 +120,8 @@ class AppMenu {
                 }
                 break;
             case 'focus-search':
-                document.querySelector('.sidebar')?.classList.remove('collapsed');
+                this.openSidebar();
+                this.setExplorerMode(true);
                 document.getElementById('searchFiles')?.focus();
                 break;
             case 'run-file':
@@ -144,15 +157,96 @@ class AppMenu {
                 document.querySelector('.terminal-panel')?.classList.remove('collapsed');
                 window.editorInstance?.showToolsView('terminal');
                 break;
-            case 'help-commands':
-                window.fileManager?.notify('Build/Run supports .js and .py; Decompile supports .exe, .dll, .class, .jar, and .wasm in Windows/Linux desktop.');
-                break;
             case 'about':
-                alert('Nightmare Designs Code\n\nDark editor shell with Matrix visual theme.');
+                this.showInfo(
+                    'About Nightmare Code',
+                    'Nightmare Code is a desktop and browser code editor with workspace browsing, syntax highlighting, desktop build/run and decompilation tools, optional local dictation, local snippet packs, and reviewable AI assistance.'
+                );
+                break;
+            case 'help-commands':
+                this.showInfo(
+                    'Help and shortcuts',
+                    'File: Ctrl+N new file, Ctrl+O open file, Ctrl+S save.\nExplorer search filters workspace paths; click folders to expand or collapse them.\nBuild/Run supports JavaScript and Python in the desktop app. Decompile supports PE, Java bytecode/JAR, and WebAssembly on x64 Windows/Linux.\nExtensions imports local JSON snippet packs; pack code is never executed.\nThe unrestricted terminal is available only in supported desktop builds after opening a workspace and confirming its warning.'
+                );
                 break;
             default:
+                window.fileManager?.notify(`This menu action is not available: ${action}`);
                 break;
         }
+    }
+
+    toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar?.classList.toggle('collapsed');
+        const isOpen = !sidebar?.classList.contains('collapsed');
+        document.querySelectorAll('.activity-bar [data-action="toggle-sidebar"], #toggleSidebar').forEach((button) => {
+            button.classList.toggle('active', isOpen);
+            button.setAttribute('aria-pressed', String(isOpen));
+        });
+        this.setExplorerMode(isOpen ? false : null);
+    }
+
+    openSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar?.classList.remove('collapsed');
+        document.querySelectorAll('.activity-bar [data-action="toggle-sidebar"], #toggleSidebar').forEach((button) => {
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+        });
+        this.setExplorerMode(false);
+    }
+
+    setExplorerMode(searchActive) {
+        document.querySelectorAll('.activity-bar [data-action="toggle-sidebar"], .activity-bar [data-action="focus-search"]').forEach((button) => {
+            const active = searchActive !== null && button.dataset.action === (searchActive ? 'focus-search' : 'toggle-sidebar');
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+    }
+
+    runEditorCommand(editor, command, selectionRequired = false) {
+        if (!editor) return;
+        if (selectionRequired && editor.selectionStart === editor.selectionEnd) {
+            window.fileManager?.notify(`Select text before using ${command}.`);
+            return;
+        }
+        editor.focus();
+        const succeeded = document.execCommand(command);
+        if (!succeeded) window.fileManager?.notify(`${command} is not available here.`);
+    }
+
+    async pasteIntoEditor(editor) {
+        if (!editor) return;
+        editor.focus();
+        try {
+            const text = await navigator.clipboard.readText();
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            editor.setRangeText(text, start, end, 'end');
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch {
+            window.fileManager?.notify('Clipboard access was denied or is unavailable in this browser.');
+        }
+    }
+
+    toggleExtensions() {
+        const panel = document.getElementById('extensionsPanel');
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
+        document.querySelectorAll('.right-activity-bar [data-action="toggle-extensions"]').forEach((button) => {
+            button.classList.toggle('active', !panel.hidden);
+            button.setAttribute('aria-pressed', String(!panel.hidden));
+        });
+    }
+
+    showInfo(title, message) {
+        const dialog = document.getElementById('infoDialog');
+        const heading = document.getElementById('infoDialogTitle');
+        const content = document.getElementById('infoDialogContent');
+        if (!dialog || !heading || !content) return;
+        heading.textContent = title;
+        content.textContent = message;
+        if (!dialog.open) dialog.showModal();
     }
 
     runWorkspaceAction(command) {

@@ -7,6 +7,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 ✨ **Editor Interface**
 - VS Code-inspired dark IDE layout with an activity bar, searchable Explorer, editor tabs and breadcrumbs, and a resizable Terminal/AI panel
 - Blue-accented dark theme with a subtle, adjustable Matrix background
+- Right-side Extensions panel for importing and inserting local JSON snippet packs (extension JavaScript is not executed)
 - File explorer with file tree navigation
 - Multi-tab support for editing multiple files
 - File type detection for common programming languages and configuration formats
@@ -30,6 +31,7 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - Draft recovery in browser `localStorage`
 - Open a workspace folder and read/save text files in the desktop app
 - Filter the workspace file list
+- Expand/collapse folders and search matching workspace paths
 - File type detection and display
 
 ⌨️ **Keyboard Shortcuts**
@@ -120,6 +122,26 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - On desktop, check **Use local Parakeet** to opt in to local speech-to-text. The app requires Python 3.10+ and, after native confirmation, installs the pinned `moondream==2.6.1` package and dependencies into an app-local virtual environment. On first transcription it asks before downloading about 178 MB of Parakeet Redux weights. Recordings are limited to 25 MB, processed locally, and deleted from the temporary recording directory after transcription; the package and downloaded model remain in app data. Python and the installed package run with your user permissions.
    - Leave local Parakeet unchecked to use browser/platform speech recognition, which may send audio to its provider. Local Parakeet is unavailable in browser and Android builds; read-aloud uses the device's speech voices.
 
+8. **Extensions**
+   - Open the Extensions icon on the right activity bar and import a local JSON snippet pack. Packs are stored in this browser/app profile and can be removed from the same panel.
+   - The supported format is data-only; the app inserts snippet text into the current editor selection and never runs plugin code:
+    ```json
+    {
+      "schemaVersion": 1,
+      "name": "My Snippets",
+      "version": "1.0.0",
+      "description": "Reusable examples",
+      "snippets": [
+        {
+          "name": "Hello",
+          "language": "javascript",
+          "body": "console.log('Hello');"
+        }
+      ]
+    }
+    ```
+   - Packs are limited to 256 KB, 50 snippets, and 10,000 characters per snippet. This is not a marketplace or a JavaScript extension host.
+
 ## File Structure
 
 ```
@@ -129,6 +151,7 @@ nightmarecode2/
 ├── preload.js              # Context-isolated IPC bridge
 ├── decompiler.js           # Pinned tools, verified acquisition, and local execution
 ├── parakeet.js             # Optional local Parakeet runtime and transcription
+├── js/extensions.js        # Validated, local snippet-pack manager
 ├── css/
 │   └── style.css          # All styling and theming
 ├── js/

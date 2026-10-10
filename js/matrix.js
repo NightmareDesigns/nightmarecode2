@@ -131,9 +131,9 @@ class MatrixBackground {
     }
 
     hexToRgba(hex, alpha) {
-        const safeHex = /^#([A-Fa-f0-9]{6})$/.test(hex) ? hex : '#39ff14';
+        const safeHex = /^#([A-Fa-f0-9]{6})$/.test(hex) ? hex : '#4daafc';
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(safeHex);
-        if (!result) return `rgba(57, 255, 20, ${alpha})`;
+        if (!result) return `rgba(77, 170, 252, ${alpha})`;
         const r = parseInt(result[1], 16);
         const g = parseInt(result[2], 16);
         const b = parseInt(result[3], 16);
@@ -193,6 +193,16 @@ class MatrixBackground {
                 return;
             }
             const parsed = JSON.parse(raw);
+            if (parsed.backgroundColor === '#000000' && parsed.frameColor === '#8b0000' &&
+                parsed.matrixColor === '#39ff14' && parsed.textColor === '#39ff14' &&
+                parsed.matrixOpacity === 42 && parsed.panelOpacity === 60 && parsed.speed === 3) {
+                this.theme = { ...this.defaults };
+                this.opacity = this.theme.matrixOpacity / 100;
+                this.applyTheme();
+                this.syncThemeUI();
+                this.saveTheme();
+                return;
+            }
             this.theme = {
                 ...this.defaults,
                 ...parsed
