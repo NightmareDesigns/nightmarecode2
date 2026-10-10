@@ -1,3 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+    <title>Nightmare Designs Code</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+    <header class="app-menu">
+        <div class="brand"><span aria-hidden="true">🩸</span> NIGHTMARE CODE</div>
+        <nav class="menu-group" aria-label="Application menu">
+            <div class="dropdown">
+                <button class="menu-button" type="button">File</button>
+                <div class="dropdown-menu">
+                    <button data-action="new-file" type="button">New file <span>Ctrl+N</span></button>
+                    <button data-action="open-file" type="button">Open file <span>Ctrl+O</span></button>
+                    <button data-action="open-workspace" type="button">Open workspace</button>
+                    <button data-action="save-file" type="button">Save <span>Ctrl+S</span></button>
+                    <button data-action="save-as" type="button">Save as</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">View</button>
+                <div class="dropdown-menu">
+                    <button data-action="toggle-sidebar" type="button">Toggle explorer</button>
+                    <button data-action="toggle-terminal" type="button">Toggle terminal</button>
+                    <button data-action="focus-editor" type="button">Focus editor</button>
+                    <button data-action="focus-terminal" type="button">Focus terminal</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">Help</button>
+                <div class="dropdown-menu">
+                    <button data-action="help-commands" type="button">Terminal help</button>
+                    <button data-action="about" type="button">About</button>
+                </div>
+            </div>
+        </nav>
+        <div id="workspaceLabel" class="window-status">No workspace open</div>
+    </header>
+
+    <main class="app-shell">
+        <aside class="sidebar">
+            <div class="panel-heading">
+                <span>EXPLORER</span>
+                <div class="panel-actions">
+                    <button id="openWorkspaceBtn" class="icon-button" type="button" title="Open workspace folder" aria-label="Open workspace folder">▣</button>
+                    <button id="newFileBtn" class="icon-button" type="button" title="New file" aria-label="New file">＋</button>
+                    <button id="openFileBtn" class="icon-button" type="button" title="Open file" aria-label="Open file">↗</button>
+                </div>
+            </div>
+            <label class="search-box">
+                <span class="visually-hidden">Filter files</span>
+                <input id="searchFiles" type="search" placeholder="Filter files…" autocomplete="off">
+            </label>
+            <div id="fileTree" class="file-tree" role="tree" aria-label="Workspace files"></div>
+            <section class="settings-panel" aria-label="Appearance">
+                <h2>APPEARANCE</h2>
+                <label>Matrix opacity <span id="opacityValue">42%</span>
+                    <input id="opacitySlider" type="range" min="0" max="100" value="42">
+                </label>
+                <label>Matrix speed <span id="speedValue">3x</span>
+                    <input id="speedSlider" type="range" min="1" max="10" value="3">
+                </label>
+                <label>Panel opacity <span id="panelOpacityValue">60%</span>
+                    <input id="panelOpacitySlider" type="range" min="10" max="100" value="60">
+                </label>
+                <div class="color-settings">
+                    <label>Background <input id="themeBackgroundColor" type="color" value="#000000"></label>
+                    <label>Frame <input id="themeFrameColor" type="color" value="#8b0000"></label>
+                    <label>Text <input id="themeTextColor" type="color" value="#39ff14"></label>
+                    <label>Matrix <input id="themeMatrixColor" type="color" value="#39ff14"></label>
+                </div>
+                <button id="resetThemeBtn" class="quiet-button" type="button">Reset appearance</button>
+                <button id="pauseBtn" class="quiet-button" type="button">⏸ Pause Matrix</button>
+            </section>
+        </aside>
+
+        <section class="workbench">
+            <div class="workbench-toolbar">
+                <button id="toggleSidebar" class="quiet-button" type="button">☰ Explorer</button>
+                <div class="toolbar-spacer"></div>
+                <button data-action="save-file" class="quiet-button" type="button">Save</button>
+                <button id="toggleTerminal" class="quiet-button" type="button">Terminal</button>
+            </div>
+            <div class="tab-container" role="tablist" aria-label="Open files"></div>
+            <div class="editor-wrap">
+                <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
+                <textarea id="codeEditor" aria-label="Code editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+            </div>
+            <div class="status-bar">
+                <span id="fileType">Plain Text</span>
+                <span><span id="lineCount">1</span>:<span id="columnCount">1</span></span>
+                <span id="fileSize">0 B</span>
+                <span id="saveStatus" class="save-status">Ready</span>
+            </div>
+            <section class="terminal-panel" aria-label="Terminal demo">
+                <div class="terminal-heading"><span>TERMINAL · SAFE DEMO MODE</span><span>Commands are simulated; nothing executes on your system.</span></div>
+                <div id="terminal" class="terminal-output" aria-live="polite"></div>
+                <label class="terminal-prompt"><span>$</span><span class="visually-hidden">Demo terminal command</span>
+                    <input id="terminalInput" type="text" placeholder="Type help for available demo commands" autocomplete="off">
+                </label>
+            </section>
+        </section>
+    </main>
+    <div id="notification" class="notification" role="status" aria-live="polite"></div>
+    <input id="browserFileInput" type="file" hidden>
     <script src="js/matrix.js"></script>
     <script src="js/filemanager.js"></script>
     <script src="js/editor.js"></script>

@@ -2,7 +2,12 @@ class FileManager {
     constructor() {
         this.files = this.loadFiles();
         this.currentFile = this.getInitialFile();
+        this.workspaceName = '';
+        this.workspaceFiles = [];
+        this.desktop = Boolean(window.desktopApp?.isDesktop);
+        this.saveTimer = null;
         this.init();
+        window.fileManager = this;
     }
 
     init() {
@@ -13,56 +18,114 @@ class FileManager {
     }
 
     getInitialFile() {
-        if (this.files['untitled.txt']) return 'untitled.txt';
-        const fileNames = Object.keys(this.files);
-        return fileNames.length > 0 ? fileNames[0] : null;
+        const names = Object.keys(this.files);
+        return names.includes('untitled.txt') ? 'untitled.txt' : names[0] || null;
     }
 
     loadFiles() {
-        const stored = localStorage.getItem('nightmare_files');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                    return parsed;
+        const files = Object.create(null);
+        try {
+            const stored = JSON.parse(localStorage.getItem('nightmare_files') || '{}');
+            if (stored && typeof stored === 'object') {
+                const savedFiles = stored.files && typeof stored.files === 'object' ? stored.files : stored;
+                for (const [name, file] of Object.entries(savedFiles)) {
+                    if (typeof name === 'string' && file && typeof file.content === 'string') {
+                        files[name] = {
+                            name,
+                            content: file.content,
+                            loaded: true,
+                            dirty: false,
+                            isWorkspaceFile: false,
+                            token: file.token || null
+                        };
+                    }
                 }
-            } catch (err) {
-                console.warn('Invalid saved files in localStorage, resetting.', err);
             }
+        } catch (error) {
+            console.warn('Invalid saved editor recovery data.', error);
         }
-        return {
-            'untitled.txt': { name: 'untitled.txt', content: '', type: 'text' }
-        };
+        if (Object.keys(files).length === 0) {
+            files['untitled.txt'] = { name: 'untitled.txt', content: '', loaded: true, dirty: false };
+        }
+        return files;
     }
 
     saveFiles() {
-        localStorage.setItem('nightmare_files', JSON.stringify(this.files));
+        try {
+            const recoverable = {};
+            for (const [name, file] of Object.entries(this.files)) {
+                if (file.loaded && typeof file.content === 'string') {
+                    recoverable[name] = { content: file.content };
+                }
+            }
+            localStorage.setItem('nightmare_files', JSON.stringify({ version: 1, files: recoverable }));
+        } catch (error) {
+            this.setStatus('Recovery storage is full or unavailable.', true);
+        }
+    }
+
+    setStatus(message, isError = false) {
+        const status = document.getElementById('saveStatus');
+        if (!status) return;
+        status.textContent = message;
+        status.classList.toggle('error', isError);
+    }
+
+    notify(message) {
+        const notification = document.getElementById('notification');
+        if (!notification) return;
+        notification.textContent = message;
+        notification.classList.add('visible');
+        clearTimeout(this.notificationTimer);
+        this.notificationTimer = setTimeout(() => notification.classList.remove('visible'), 2600);
+    }
+
+    currentEditorContent() {
+        const editor = document.getElementById('codeEditor');
+        return editor ? editor.value : '';
+    }
+
+    captureCurrentContent() {
+        if (!this.currentFile || !this.files[this.currentFile]) return;
+        const file = this.files[this.currentFile];
+        file.content = this.currentEditorContent();
+        file.loaded = true;
     }
 
     createNewFile() {
-        const name = 'untitled';
         let counter = 1;
-        while (this.files[`${name}${counter}.txt`]) {
-            counter++;
-        }
-        const newFileName = `${name}${counter}.txt`;
-        this.files[newFileName] = { name: newFileName, content: '', type: 'text' };
+        let name = `untitled${counter}.txt`;
+        while (this.files[name]) name = `untitled${++counter}.txt`;
+        this.files[name] = {
+            name,
+            content: '',
+            loaded: true,
+            dirty: true,
+            isWorkspaceFile: Boolean(this.workspaceName)
+        };
         this.saveFiles();
         this.renderFileTree();
-        this.switchFile(newFileName);
+        this.switchFile(name);
     }
 
-    switchFile(fileName) {
+    async switchFile(fileName) {
         if (!this.files[fileName]) return;
-
-        // Save current file content
-        const editor = document.getElementById('codeEditor');
-        if (editor && this.currentFile && this.files[this.currentFile]) {
-            this.files[this.currentFile].content = editor.value;
-        }
-
-        this.currentFile = fileName;
+        this.captureCurrentContent();
         this.saveFiles();
+        this.currentFile = fileName;
+        const file = this.files[fileName];
+        if (!file.loaded && file.isWorkspaceFile) {
+            try {
+                file.content = await window.desktopApp.readWorkspaceFile(fileName);
+                file.loaded = true;
+                file.dirty = false;
+                this.saveFiles();
+            } catch (error) {
+                this.notify(`Could not open ${fileName}: ${error.message}`);
+                this.setStatus('Open failed', true);
+                return;
+            }
+        }
         this.updateEditor();
         this.updateTabs();
         this.renderFileTree();
@@ -70,76 +133,58 @@ class FileManager {
 
     updateEditor() {
         const editor = document.getElementById('codeEditor');
-        if (!editor || !this.currentFile) return;
-
-        const file = this.files[this.currentFile];
-        if (file) {
-            editor.value = file.content;
-            this.updateLineNumbers();
-            this.updateStatusBar();
-        }
+        const file = this.currentFile && this.files[this.currentFile];
+        if (!editor || !file) return;
+        editor.value = file.content || '';
+        this.updateLineNumbers();
+        this.updateStatusBar();
+        this.setStatus(file.dirty ? 'Unsaved changes' : 'Ready');
     }
 
     updateLineNumbers() {
         const editor = document.getElementById('codeEditor');
         const lineNumbers = document.getElementById('lineNumbers');
         if (!editor || !lineNumbers) return;
-
-        const lines = editor.value.split('\n').length;
-        lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+        lineNumbers.textContent = Array.from({ length: editor.value.split('\n').length }, (_, index) => index + 1).join('\n');
     }
 
     updateStatusBar() {
         const editor = document.getElementById('codeEditor');
         if (!editor) return;
-
         const fileType = this.currentFile ? this.getFileType(this.currentFile) : 'Plain Text';
         const size = new Blob([editor.value]).size;
-        const currentLine = editor.value.substring(0, editor.selectionStart).split('\n').length;
+        const currentLine = editor.value.slice(0, editor.selectionStart).split('\n').length;
         const lastNewlineIndex = editor.value.lastIndexOf('\n', Math.max(0, editor.selectionStart - 1));
         const currentColumn = editor.selectionStart - lastNewlineIndex;
-
-        const lineCountEl = document.getElementById('lineCount');
-        const columnCountEl = document.getElementById('columnCount');
-        const fileTypeEl = document.getElementById('fileType');
-        const fileSizeEl = document.getElementById('fileSize');
-
-        if (lineCountEl) lineCountEl.textContent = String(currentLine);
-        if (columnCountEl) columnCountEl.textContent = String(currentColumn);
-        if (fileTypeEl) fileTypeEl.textContent = fileType;
-        if (fileSizeEl) fileSizeEl.textContent = size + ' B';
+        document.getElementById('lineCount').textContent = String(currentLine);
+        document.getElementById('columnCount').textContent = String(currentColumn);
+        document.getElementById('fileType').textContent = fileType;
+        document.getElementById('fileSize').textContent = `${size} B`;
     }
 
     getFileType(fileName) {
         const ext = fileName.split('.').pop().toLowerCase();
         const types = {
-            py: 'Python',
-            js: 'JavaScript',
-            html: 'HTML',
-            css: 'CSS',
-            sh: 'Shell',
-            txt: 'Plain Text',
-            json: 'JSON',
-            md: 'Markdown'
+            py: 'Python', js: 'JavaScript', jsx: 'JavaScript JSX', ts: 'TypeScript', tsx: 'TypeScript JSX',
+            html: 'HTML', css: 'CSS', sh: 'Shell', txt: 'Plain Text', json: 'JSON', md: 'Markdown',
+            java: 'Java', cs: 'C#', cpp: 'C++', c: 'C', go: 'Go', rs: 'Rust', php: 'PHP', xml: 'XML',
+            yml: 'YAML', yaml: 'YAML', toml: 'TOML', sql: 'SQL'
         };
-        return types[ext] || 'Unknown';
+        return types[ext] || 'Plain Text';
     }
 
     deleteFile(fileName) {
-        if (Object.keys(this.files).length <= 1) {
-            alert('Cannot delete the last file!');
-            return;
-        }
-
+        if (!this.files[fileName]) return;
         delete this.files[fileName];
-        this.saveFiles();
-
         if (this.currentFile === fileName) {
-            const firstFile = Object.keys(this.files)[0] || null;
-            this.currentFile = firstFile;
+            this.currentFile = Object.keys(this.files)[0] || null;
+            if (!this.currentFile) {
+                this.files['untitled.txt'] = { name: 'untitled.txt', content: '', loaded: true, dirty: false };
+                this.currentFile = 'untitled.txt';
+            }
             this.updateEditor();
         }
-
+        this.saveFiles();
         this.renderFileTree();
         this.updateTabs();
     }
@@ -147,104 +192,236 @@ class FileManager {
     renderFileTree() {
         const fileTree = document.getElementById('fileTree');
         if (!fileTree) return;
+        fileTree.replaceChildren();
+        const filter = (document.getElementById('searchFiles')?.value || '').trim().toLowerCase();
+        const workspaceNames = new Set(this.workspaceFiles.map((entry) => entry.path));
+        const entries = this.workspaceFiles.filter((entry) => !entry.directory || entry.path.toLowerCase().includes(filter));
+        for (const entry of entries) {
+            if (filter && !entry.path.toLowerCase().includes(filter)) continue;
+            const item = document.createElement('div');
+            const isActive = entry.path === this.currentFile;
+            item.className = `file-item${isActive ? ' active' : ''}${entry.directory ? ' directory' : ''}`;
+            item.setAttribute('role', 'treeitem');
+            item.setAttribute('aria-selected', String(isActive));
+            item.style.paddingLeft = `${6 + (entry.path.split('/').length - 1) * 12}px`;
+            const icon = document.createElement('span');
+            icon.className = 'file-icon';
+            icon.textContent = entry.directory ? '▸' : '📄';
+            const label = document.createElement('span');
+            label.className = 'file-name';
+            label.textContent = entry.path.split('/').pop();
+            item.append(icon, label);
+            if (!entry.directory) {
+                item.title = entry.path;
+                item.addEventListener('click', () => this.switchFile(entry.path));
+            }
+            fileTree.appendChild(item);
+        }
 
-        fileTree.innerHTML = '';
-        Object.keys(this.files).forEach((fileName) => {
-            const fileItem = document.createElement('div');
-            fileItem.className = `file-item ${fileName === this.currentFile ? 'active' : ''}`;
-            fileItem.dataset.file = fileName;
-            fileItem.innerHTML = `
-                <span class="file-icon">📄</span>
-                <span class="file-name">${fileName}</span>
-            `;
-            fileItem.addEventListener('click', () => this.switchFile(fileName));
-            fileTree.appendChild(fileItem);
-        });
+        for (const [name, file] of Object.entries(this.files)) {
+            if (file.isWorkspaceFile && workspaceNames.has(name)) continue;
+            if (!name.toLowerCase().includes(filter)) continue;
+            const item = document.createElement('div');
+            const active = name === this.currentFile;
+            item.className = `file-item${active ? ' active' : ''}`;
+            item.setAttribute('role', 'treeitem');
+            item.setAttribute('aria-selected', String(active));
+            const icon = document.createElement('span');
+            icon.className = 'file-icon';
+            icon.textContent = '📄';
+            const label = document.createElement('span');
+            label.className = 'file-name';
+            label.textContent = name;
+            item.append(icon, label);
+            item.addEventListener('click', () => this.switchFile(name));
+            fileTree.appendChild(item);
+        }
     }
 
     updateTabs() {
         const tabContainer = document.querySelector('.tab-container');
         if (!tabContainer) return;
-
-        tabContainer.innerHTML = '';
-        Object.keys(this.files).forEach((fileName) => {
+        tabContainer.replaceChildren();
+        for (const [fileName, file] of Object.entries(this.files)) {
             const tab = document.createElement('div');
-            tab.className = `tab ${fileName === this.currentFile ? 'active' : ''}`;
-            tab.dataset.file = fileName;
-            tab.innerHTML = `
-                <span class="tab-name">${fileName}</span>
-                <button class="tab-close" data-file="${fileName}">×</button>
-            `;
-
-            tab.querySelector('.tab-name').addEventListener('click', () => this.switchFile(fileName));
-            tab.querySelector('.tab-close').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deleteFile(fileName);
-            });
-
+            tab.className = `tab${fileName === this.currentFile ? ' active' : ''}`;
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-selected', String(fileName === this.currentFile));
+            const name = document.createElement('span');
+            name.className = 'tab-name';
+            name.textContent = `${fileName}${file.dirty ? ' •' : ''}`;
+            name.title = fileName;
+            name.addEventListener('click', () => this.switchFile(fileName));
+            const close = document.createElement('button');
+            close.className = 'tab-close';
+            close.type = 'button';
+            close.setAttribute('aria-label', `Close ${fileName}`);
+            close.textContent = '×';
+            close.addEventListener('click', () => this.deleteFile(fileName));
+            tab.append(name, close);
             tabContainer.appendChild(tab);
-        });
+        }
     }
 
     attachEventListeners() {
-        const newFileBtn = document.getElementById('newFileBtn');
-        if (newFileBtn) {
-            newFileBtn.addEventListener('click', () => this.createNewFile());
-        }
-
-        const openFileBtn = document.getElementById('openFileBtn');
-        if (openFileBtn) {
-            openFileBtn.addEventListener('click', () => {
-                const fileName = prompt('Enter file name:');
-                if (!fileName) return;
-
-                if (!this.files[fileName]) {
-                    this.files[fileName] = { name: fileName, content: '', type: 'text' };
-                    this.saveFiles();
-                }
-                this.switchFile(fileName);
-            });
-        }
-
+        document.getElementById('newFileBtn')?.addEventListener('click', () => this.createNewFile());
+        document.getElementById('openFileBtn')?.addEventListener('click', () => this.openFile());
+        document.getElementById('openWorkspaceBtn')?.addEventListener('click', () => this.openWorkspace());
+        document.getElementById('searchFiles')?.addEventListener('input', () => this.renderFileTree());
         const editor = document.getElementById('codeEditor');
         if (!editor) return;
-
         editor.addEventListener('input', () => {
+            this.captureCurrentContent();
+            if (this.currentFile && this.files[this.currentFile]) this.files[this.currentFile].dirty = true;
             this.updateLineNumbers();
             this.updateStatusBar();
-
-            if (this.currentFile && this.files[this.currentFile]) {
-                this.files[this.currentFile].content = editor.value;
-            }
+            this.setStatus('Unsaved changes');
+            this.updateTabs();
+            clearTimeout(this.saveTimer);
+            this.saveTimer = setTimeout(() => this.saveFiles(), 150);
         });
-
         editor.addEventListener('click', () => this.updateStatusBar());
         editor.addEventListener('keyup', () => this.updateStatusBar());
-
-        editor.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                e.preventDefault();
+        editor.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
                 this.saveCurrentFile();
-            }
-
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
-                e.preventDefault();
+            } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+                event.preventDefault();
                 this.createNewFile();
             }
         });
     }
 
-    saveCurrentFile() {
-        const editor = document.getElementById('codeEditor');
-        if (!editor || !this.currentFile) return;
-
-        if (this.files[this.currentFile]) {
-            this.files[this.currentFile].content = editor.value;
-            this.saveFiles();
-            console.log(`✓ File saved: ${this.currentFile}`);
+    async openWorkspace() {
+        if (!this.desktop) {
+            this.notify('Open workspace folders are available in the desktop app. Use Open File in the browser.');
+            return;
         }
+        try {
+            const workspace = await window.desktopApp.openWorkspace();
+            if (!workspace) return;
+            this.captureCurrentContent();
+            this.saveFiles();
+            this.workspaceName = workspace.name;
+            this.workspaceFiles = workspace.files || [];
+            const nextFiles = Object.create(null);
+            for (const entry of this.workspaceFiles) {
+                if (entry.directory) continue;
+                const draft = this.files[entry.path];
+                nextFiles[entry.path] = draft
+                    ? { ...draft, name: entry.path, isWorkspaceFile: true }
+                    : { name: entry.path, content: '', loaded: false, dirty: false, isWorkspaceFile: true };
+            }
+            this.files = nextFiles;
+            const first = this.workspaceFiles.find((entry) => !entry.directory);
+            this.currentFile = first?.path || null;
+            if (!this.currentFile) this.createNewFile();
+            const label = document.getElementById('workspaceLabel');
+            if (label) label.textContent = this.workspaceName;
+            this.renderFileTree();
+            this.updateTabs();
+            if (first) await this.switchFile(first.path);
+            this.notify(`Opened workspace: ${this.workspaceName}`);
+        } catch (error) {
+            this.notify(`Could not open workspace: ${error.message}`);
+        }
+    }
+
+    async openFile() {
+        if (this.desktop) {
+            try {
+                const opened = await window.desktopApp.openFile();
+                if (!opened) return;
+                const key = this.uniqueName(opened.name);
+                this.files[key] = {
+                    name: key,
+                    content: opened.content,
+                    loaded: true,
+                    dirty: false,
+                    isWorkspaceFile: false,
+                    token: opened.token
+                };
+                this.switchFile(key);
+            } catch (error) {
+                this.notify(`Could not open file: ${error.message}`);
+            }
+            return;
+        }
+        document.getElementById('browserFileInput')?.click();
+    }
+
+    uniqueName(name) {
+        if (!this.files[name]) return name;
+        const dot = name.lastIndexOf('.');
+        const stem = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : '';
+        let index = 2;
+        while (this.files[`${stem} (${index})${ext}`]) index++;
+        return `${stem} (${index})${ext}`;
+    }
+
+    async saveCurrentFile() {
+        const file = this.currentFile && this.files[this.currentFile];
+        if (!file) return;
+        this.captureCurrentContent();
+        const content = file.content;
+        try {
+            if (this.desktop && file.isWorkspaceFile) {
+                await window.desktopApp.writeWorkspaceFile(this.currentFile, content);
+            } else if (this.desktop && file.token) {
+                await window.desktopApp.saveFile(file.token, content);
+            } else if (this.desktop) {
+                const result = await window.desktopApp.saveFileAs(content);
+                if (!result) return;
+                file.token = result.token;
+                file.isWorkspaceFile = false;
+                file.name = result.name;
+            } else {
+                this.downloadFile(this.currentFile, content);
+            }
+            file.dirty = false;
+            this.saveFiles();
+            this.updateTabs();
+            this.setStatus('Saved');
+            this.notify(`Saved ${this.currentFile}`);
+        } catch (error) {
+            this.setStatus('Save failed', true);
+            this.notify(`Could not save file: ${error.message}`);
+        }
+    }
+
+    async saveAs() {
+        const file = this.currentFile && this.files[this.currentFile];
+        if (!file) return;
+        this.captureCurrentContent();
+        if (!this.desktop) {
+            this.downloadFile(this.currentFile, file.content);
+            return;
+        }
+        try {
+            const result = await window.desktopApp.saveFileAs(file.content);
+            if (!result) return;
+            file.token = result.token;
+            file.isWorkspaceFile = false;
+            file.dirty = false;
+            this.setStatus('Saved');
+            this.updateTabs();
+            this.notify(`Saved ${result.name}`);
+        } catch (error) {
+            this.notify(`Could not save file: ${error.message}`);
+        }
+    }
+
+    downloadFile(name, content) {
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name.split('/').pop() || 'untitled.txt';
+        link.click();
+        URL.revokeObjectURL(url);
     }
 }
 
-// Initialize File Manager
 const fileManager = new FileManager();
