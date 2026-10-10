@@ -7,7 +7,7 @@ class MatrixBackground {
         if (!this.ctx) return;
 
         this.defaults = {
-            matrixOpacity: 40,
+            matrixOpacity: 42,
             matrixColor: '#39ff14',
             backgroundColor: '#000000',
             frameColor: '#8b0000',
@@ -19,6 +19,7 @@ class MatrixBackground {
         this.resizeCanvas();
         this.init();
         this.initThemeControls();
+
         window.addEventListener('resize', () => {
             this.resizeCanvas();
             this.setupDrops();
@@ -34,45 +35,98 @@ class MatrixBackground {
         this.canvas.height = window.innerHeight;
     }
 
+    createDrop(index) {
+        const columnX = index * this.fontSize + this.fontSize / 2;
+        const startY = Math.random() * this.canvas.height;
+        const baseSpeed = this.speed * (0.7 + Math.random() * 0.9);
+        const trailLength = Math.floor(8 + Math.random() * 18);
+        const resetThreshold = this.canvas.height + Math.random() * this.canvas.height * 0.45;
+        const twinkleSeed = Math.random() * Math.PI * 2;
+
+        return {
+            x: columnX,
+            y: startY,
+            speed: baseSpeed,
+            trailLength,
+            resetThreshold,
+            twinkleSeed,
+            resetChance: 0.008 + Math.random() * 0.02
+        };
+    }
+
     setupDrops() {
-        this.columns = Math.floor(this.canvas.width / this.fontSize);
-        this.drops = Array.from({ length: this.columns }, () => Math.random() * this.canvas.height);
+        this.columns = Math.max(1, Math.floor(this.canvas.width / this.fontSize));
+        this.drops = Array.from({ length: this.columns }, (_, index) => this.createDrop(index));
     }
 
     init() {
-        this.characters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$#@%&*';
-        this.fontSize = 14;
+        // Katakana-heavy cinematic mix with fallback symbols
+        this.characters = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@%&';
+        this.fontSize = 16;
         this.setupDrops();
         this.speed = this.defaults.speed;
         this.opacity = this.defaults.matrixOpacity / 100;
         this.isRunning = true;
         this.theme = { ...this.defaults };
+        this.frameCount = 0;
 
         this.loadTheme();
         this.animate();
         this.bindCoreControls();
     }
 
+    randomChar() {
+        return this.characters.charAt(Math.floor(Math.random() * this.characters.length));
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
         if (!this.isRunning || !this.ctx) return;
 
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        this.frameCount += 1;
+
+        // Stronger trail persistence for cinematic rain
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.11)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.fillStyle = this.hexToRgba(this.theme.matrixColor, this.opacity);
         this.ctx.font = `${this.fontSize}px 'Courier New'`;
         this.ctx.textAlign = 'center';
 
         for (let i = 0; i < this.columns; i++) {
-            const char = this.characters.charAt(Math.floor(Math.random() * this.characters.length));
-            this.ctx.fillText(char, i * this.fontSize + this.fontSize / 2, this.drops[i]);
+            const drop = this.drops[i];
 
-            if (this.drops[i] > this.canvas.height && Math.random() > 0.975) {
-                this.drops[i] = 0;
+            // Draw tail from dim -> bright head
+            for (let t = drop.trailLength; t >= 0; t--) {
+                const y = drop.y - t * this.fontSize;
+                if (y < -this.fontSize || y > this.canvas.height + this.fontSize) continue;
+
+                const isHead = t === 0;
+                const depth = 1 - t / Math.max(1, drop.trailLength);
+
+                // Slight cinematic shimmer
+                const shimmer = 0.85 + 0.2 * Math.sin(this.frameCount * 0.06 + drop.twinkleSeed + t * 0.15);
+                const alphaBase = this.opacity * (isHead ? 1.45 : 0.12 + depth * 0.55);
+                const alpha = Math.min(1, Math.max(0.03, alphaBase * shimmer));
+
+                this.ctx.fillStyle = this.hexToRgba(this.theme.matrixColor, alpha);
+                this.ctx.fillText(this.randomChar(), drop.x, y);
+
+                // Head bloom highlight for movie-like leading glyph
+                if (isHead) {
+                    this.ctx.fillStyle = `rgba(215, 255, 215, ${Math.min(0.9, alpha * 0.75)})`;
+                    this.ctx.fillText(this.randomChar(), drop.x, y);
+                }
             }
 
-            this.drops[i] += this.speed;
+            // Organic speed drift per column
+            const drift = Math.sin((this.frameCount + i * 7) * 0.02 + drop.twinkleSeed) * 0.35;
+            drop.y += Math.max(0.4, drop.speed + drift);
+
+            // Non-uniform reset logic
+            if (drop.y > drop.resetThreshold && Math.random() < drop.resetChance) {
+                this.drops[i] = this.createDrop(i);
+                this.drops[i].y = -Math.random() * this.canvas.height * 0.25;
+            }
         }
     }
 
@@ -96,6 +150,14 @@ class MatrixBackground {
     setSpeed(value) {
         const v = Number(value);
         this.speed = Math.min(10, Math.max(1, v));
+
+        // Re-seed drop speeds to reflect updated master speed while keeping organic variance
+        if (Array.isArray(this.drops)) {
+            this.drops = this.drops.map((drop, index) => ({
+                ...drop,
+                speed: this.speed * (0.7 + ((index * 37) % 100) / 100 * 0.9)
+            }));
+        }
     }
 
     togglePause() {
@@ -220,6 +282,7 @@ class MatrixBackground {
                 this.theme = { ...this.defaults };
                 this.opacity = this.defaults.matrixOpacity / 100;
                 this.speed = this.defaults.speed;
+                this.setupDrops();
                 this.applyTheme();
                 this.syncThemeUI();
                 const speedSlider = document.getElementById('speedSlider');
