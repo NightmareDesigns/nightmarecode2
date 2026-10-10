@@ -118,7 +118,10 @@
             <div class="tab-container" role="tablist" aria-label="Open files"></div>
             <div class="editor-wrap">
                 <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
-                <textarea id="codeEditor" aria-label="Code editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+                <div class="editor-code-pane">
+                    <pre id="highlightLayer" aria-hidden="true"><code id="highlightedCode"></code></pre>
+                    <textarea id="codeEditor" aria-label="Code editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+                </div>
             </div>
             <div class="status-bar">
                 <span id="fileType">Plain Text</span>
@@ -140,6 +143,7 @@
     <div id="notification" class="notification" role="status" aria-live="polite"></div>
     <input id="browserFileInput" type="file" hidden>
     <script src="js/matrix.js"></script>
+    <script src="vendor/highlight.min.js"></script>
     <script src="js/filemanager.js"></script>
     <script src="js/editor.js"></script>
     <script src="js/menu.js"></script>

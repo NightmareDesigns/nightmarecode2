@@ -152,6 +152,7 @@ class FileManager {
         if (!editor || !file) return;
         editor.value = file.content || '';
         this.updateLineNumbers();
+        this.updateHighlight();
         this.updateStatusBar();
         this.setStatus(file.dirty ? 'Unsaved changes' : 'Ready');
     }
@@ -161,6 +162,49 @@ class FileManager {
         const lineNumbers = document.getElementById('lineNumbers');
         if (!editor || !lineNumbers) return;
         lineNumbers.textContent = Array.from({ length: editor.value.split('\n').length }, (_, index) => index + 1).join('\n');
+    }
+
+    updateHighlight() {
+        const editor = document.getElementById('codeEditor');
+        const code = document.getElementById('highlightedCode');
+        if (!editor || !code) return;
+        const extensions = {
+            py: 'python', js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+            html: 'xml', css: 'css', sh: 'bash', json: 'json', md: 'markdown', java: 'java',
+            cs: 'csharp', cpp: 'cpp', c: 'c', go: 'go', rs: 'rust', php: 'php', xml: 'xml',
+            yml: 'yaml', yaml: 'yaml', toml: 'toml', sql: 'sql'
+        };
+        const extension = this.currentFile?.split('.').pop().toLowerCase();
+        const language = extensions[extension];
+        const source = editor.value || ' ';
+        try {
+            const highlighted = language && window.hljs?.getLanguage(language)
+                ? window.hljs.highlight(source, { language, ignoreIllegals: true }).value
+                : null;
+            code.innerHTML = highlighted || this.escapeHTML(source);
+            code.className = highlighted ? `hljs language-${language}` : 'hljs';
+        } catch {
+            code.textContent = source;
+            code.className = 'hljs';
+        }
+        this.syncHighlightScroll();
+    }
+
+    escapeHTML(text) {
+        return text.replace(/[&<>"]/g, (character) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;'
+        })[character]);
+    }
+
+    syncHighlightScroll() {
+        const editor = document.getElementById('codeEditor');
+        const code = document.getElementById('highlightedCode');
+        const lineNumbers = document.getElementById('lineNumbers');
+        if (editor && code) code.style.transform = `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`;
+        if (editor && lineNumbers) lineNumbers.style.transform = `translateY(${-editor.scrollTop}px)`;
     }
 
     updateStatusBar() {
@@ -319,6 +363,7 @@ class FileManager {
             this.captureCurrentContent();
             if (this.currentFile && this.files[this.currentFile]) this.files[this.currentFile].dirty = true;
             this.updateLineNumbers();
+            this.updateHighlight();
             this.updateStatusBar();
             this.setStatus('Unsaved changes');
             this.updateTabs();
@@ -327,6 +372,7 @@ class FileManager {
         });
         editor.addEventListener('click', () => this.updateStatusBar());
         editor.addEventListener('keyup', () => this.updateStatusBar());
+        editor.addEventListener('scroll', () => this.syncHighlightScroll(), { passive: true });
     }
 
     async openWorkspace() {

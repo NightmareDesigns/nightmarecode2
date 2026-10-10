@@ -27,6 +27,7 @@ tasks.register('copyEditorAssets', Sync) {
         include 'index.html'
         include 'css/**'
         include 'js/**'
+        include 'vendor/**'
     }
     into(generatedEditorAssets)
 }
