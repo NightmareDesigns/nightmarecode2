@@ -114,6 +114,7 @@ ipcMain.handle('ai:complete', async (event, request) => {
     redirect: 'error',
     signal: AbortSignal.timeout(120000)
   });
+  if (!response.body) throw new Error('AI provider returned an empty response.');
   const responseChunks = [];
   let responseLength = 0;
   const reader = response.body.getReader();
@@ -149,7 +150,6 @@ ipcMain.handle('process:start', async (event, request) => {
   await assertNoSymlink(filePath);
   const stats = await fs.lstat(filePath);
   if (!stats.isFile()) throw new Error('Select a regular source file.');
-  const relativePath = path.relative(workspaceRoot, filePath);
   const extension = path.extname(filePath).toLowerCase();
   let command;
   let args;
@@ -164,16 +164,16 @@ ipcMain.handle('process:start', async (event, request) => {
 
   if (extension === '.js' && request.action === 'run') {
     command = 'node';
-    args = [relativePath];
+    args = [filePath];
   } else if (extension === '.js' && request.action === 'build') {
     command = 'node';
-    args = ['--check', relativePath];
+    args = ['--check', filePath];
   } else if (extension === '.py' && request.action === 'run') {
     command = process.platform === 'win32' ? 'python' : 'python3';
-    args = [relativePath];
+    args = [filePath];
   } else if (extension === '.py' && request.action === 'build') {
     command = process.platform === 'win32' ? 'python' : 'python3';
-    args = ['-m', 'py_compile', relativePath];
+    args = ['-m', 'py_compile', filePath];
     env.PYTHONPYCACHEPREFIX = path.join(os.tmpdir(), 'nightmarecode-python-cache');
   } else {
     throw new Error('Real Build/Run currently supports JavaScript (.js) and Python (.py) files only.');
@@ -396,4 +396,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  for (const child of activeProcesses.values()) child.kill();
+  activeProcesses.clear();
 });

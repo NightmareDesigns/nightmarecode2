@@ -127,6 +127,10 @@ class NightmareCodeEditor {
             this.appendTerminalMessage('Real Build/Run currently supports JavaScript (.js) and Python (.py) files only.');
             return;
         }
+        if (window.fileManager?.files[fileName]?.dirty) {
+            this.appendTerminalMessage('Save the current file before running or building it.');
+            return;
+        }
         if (this.activeProcessId || this.processStartPending) {
             this.appendTerminalMessage('A workspace process is already starting or running.');
             return;

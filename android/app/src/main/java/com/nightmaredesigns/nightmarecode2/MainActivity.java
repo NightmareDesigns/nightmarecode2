@@ -135,7 +135,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean isExternalDisplay() {
-        Display display = getWindowManager().getDefaultDisplay();
+        Display display = getWindow().getDecorView().getDisplay();
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         Display primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
         return display != null && primaryDisplay != null && display.getDisplayId() != primaryDisplay.getDisplayId();

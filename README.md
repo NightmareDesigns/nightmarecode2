@@ -93,7 +93,7 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - Open a desktop workspace and select a `.js` or `.py` file.
    - Build performs a JavaScript or Python syntax check; Run executes the selected file with Node.js or Python installed on your computer.
    - Each action asks for confirmation. Project code runs as your user and is not sandboxed; only run code you trust.
-   - Process output is shown in Run Output. The Stop button terminates the launched process.
+   - Process output is shown in Run Output. Stop requests termination of the launched process.
 
 6. **AI assistant**
    - Open the AI assistant tab and enter an OpenAI-compatible chat-completions endpoint and model.
@@ -172,8 +172,9 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 - Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
 - The AI assistant calls one configured OpenAI-compatible model per request; it is not an autonomous coding agent and cannot operate tools. Local model-server availability depends on installing/configuring that server separately.
+- AI/API settings are available only in the desktop build; Android currently has no AI bridge.
 - There is no plugin marketplace, Language Server Protocol integration, debugger, or decompiler yet.
-- A production plugin or AI-agent system needs provider/marketplace decisions, explicit permissions, command approval, and stronger process isolation before enabling execution.
+- An autonomous AI agent or plugin system needs explicit permissions and stronger process isolation before it can execute tools.
 - Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
 
 ## Browser Compatibility
