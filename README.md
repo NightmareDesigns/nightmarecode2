@@ -10,8 +10,10 @@ A dark, aesthetic code editor with an animated Matrix-style background. The desk
 - Multi-tab support for editing multiple files
 - File type detection for common programming languages and configuration formats
 - Line numbers and code statistics in the status bar
-- Safe demo terminal and Build menu (commands are suggestions only; they do not execute)
-- Voice menu for speech-to-text dictation, safe built-in editor commands, and read-aloud
+- Build and Run for JavaScript and Python files in desktop workspaces, with explicit execution consent
+- OpenAI-compatible coding assistant for local model servers or HTTPS API endpoints
+- Syntax highlighting for supported languages
+- Voice menu for speech-to-text dictation, built-in editor commands, and read-aloud
 
 🎬 **Animated Matrix Background**
 - Falling green code characters on dark background
@@ -59,9 +61,7 @@ cd nightmarecode2
 - **Windows portable EXE:** `npm run package`.
   Produces `dist/NightmareDesignsCode-0.1.0-portable.exe` (x64, no installer required).
 - **Linux AppImage:** `npm run dist` on Linux.
-- **Android debug APK:** `./android/gradlew -p android assembleDebug` (Linux) or
-  `android\gradlew.bat -p android assembleDebug` (Windows). The APK is written to
-  `android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Android debug APK:** download the `nightmarecode-android-apk` artifact from GitHub Actions, or build locally with `./android/gradlew -p android assembleDebug` (Linux) or `android\gradlew.bat -p android assembleDebug` (Windows). The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 The Android build requires JDK 17+, Android SDK Platform 35, and network access on
 the first build so the Gradle wrapper and Android Gradle Plugin can be downloaded.
@@ -78,7 +78,7 @@ The Windows portable executable is unsigned unless a code-signing certificate is
 2. **Edit Code**
    - Click any file in the Explorer to switch to it
    - Or click its tab at the top
-   - Type code in the plain-text editor; file types are identified in the status bar
+   - Type code with syntax highlighting for supported file types; unsupported files remain plain text
 
 3. **Save Your Work**
    - Use `Ctrl+S` / `Cmd+S` to save to the open workspace (desktop) or download the file (browser)
@@ -89,13 +89,19 @@ The Windows portable executable is unsigned unless a code-signing certificate is
    - Adjust "Animation Speed" slider (1x-10x)
    - Click "Pause Matrix" to stop/resume animation
 
-5. **Terminal and Build menu**
-   - Type commands in the safe demo terminal
-   - Available commands: `ls`, `cat`, `lang`, `build`, `run`, `echo`, `clear`, `help`, `pwd`, `date`
-   - Build and run only show suggestions. They never launch programs or execute shell commands.
-   - Click the terminal header to collapse/expand the panel
+5. **Build and Run**
+   - Open a desktop workspace and select a `.js` or `.py` file.
+   - Build performs a JavaScript or Python syntax check; Run executes the selected file with Node.js or Python installed on your computer.
+   - Each action asks for confirmation. Project code runs as your user and is not sandboxed; only run code you trust.
+   - Process output is shown in Run Output. The Stop button terminates the launched process.
 
-6. **Voice**
+6. **AI assistant**
+   - Open the AI assistant tab and enter an OpenAI-compatible chat-completions endpoint and model.
+   - The default endpoint/model target a local Ollama-compatible server. Remote endpoints must use HTTPS.
+   - API keys remain in memory in the open window and are not saved. The current file is sent only when you check “Include current file.”
+   - Review the answer, select code to replace if desired, and use Insert or Replace Selection to apply it.
+
+7. **Voice**
    - Use the Voice menu to dictate into the editor, say built-in editor commands, or read the current file/selection aloud.
    - Microphone permission is requested only when starting dictation or voice commands.
    - Speech recognition depends on the browser/platform provider and may send audio to a remote service; read-aloud uses the device's speech voices.
@@ -112,6 +118,7 @@ nightmarecode2/
 │   ├── filemanager.js     # File management system
 │   └── editor.js          # Editor core functionality
 ├── android/               # Android APK wrapper and Gradle build
+├── vendor/                # Bundled syntax highlighter and license
 └── README.md              # This file
 ```
 
@@ -161,9 +168,11 @@ The GitHub Actions workflow builds the Windows EXE, Linux AppImage, and Android 
 
 - Workspace access is scoped to a folder selected through the native dialog. Symbolic links are skipped, and workspace text files are limited to 2 MB.
 - The Android APK can open individual text files and save through Android's document picker; workspace-folder management is desktop-only.
-- The terminal is simulated. No build, run, plugin, or generated-code commands are executed.
+- Arbitrary terminal shell commands are not supported. Build/Run currently accepts only JavaScript and Python workspace files.
+- Build/Run is not OS-sandboxed. Confirmation reduces accidental execution but does not isolate code; untrusted source can access files, network, and processes as the user.
 - Voice commands only trigger the listed editor actions; they do not control a coding agent or execute shell commands.
-- There is no local/remote AI coding agent or API client, plugin marketplace, Language Server Protocol integration, debugger, real syntax highlighter, or decompiler yet.
+- The AI assistant calls one configured OpenAI-compatible model per request; it is not an autonomous coding agent and cannot operate tools. Local model-server availability depends on installing/configuring that server separately.
+- There is no plugin marketplace, Language Server Protocol integration, debugger, or decompiler yet.
 - A production plugin or AI-agent system needs provider/marketplace decisions, explicit permissions, command approval, and stronger process isolation before enabling execution.
 - Draft recovery uses browser `localStorage`, which is limited in size and is not a substitute for version control or backups.
 
@@ -189,13 +198,12 @@ Requires browser support for:
 ## Limitations
 
 - Browser mode has no direct workspace folder access
-- Terminal and Build menu are demo-only
-- No syntax highlighting engine yet
+- Browser mode cannot run builds/programs or call the desktop AI IPC
 - Single-window editing (no split view)
 
 ## Future Enhancements
 
-- [ ] Syntax highlighting, LSP diagnostics, autocomplete, formatters, and debugger support
+- [ ] LSP diagnostics, autocomplete, formatters, and debugger support
 - [ ] Cloud storage integration
 - [ ] Theme customization UI
 - [ ] Search and replace across workspace contents
@@ -203,10 +211,9 @@ Requires browser support for:
 - [ ] Permissioned plugin system and trusted marketplace support
 - [ ] Configurable local/cloud AI coding agent with reviewable diffs and checkpoints
 - [ ] Sandboxed build and run tools with explicit user approval
-- [ ] Android SDK and app build integration
 - [ ] Safe, format-scoped decompiler support
 - [ ] Split editor view
-- [ ] Actual terminal execution
+- [ ] Arbitrary terminal shell with safe sandbox support
 
 ## License
 

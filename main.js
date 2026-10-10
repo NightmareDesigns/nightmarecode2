@@ -1,6 +1,9 @@
 const { app, BrowserWindow, dialog, ipcMain, screen, session } = require('electron');
 const fs = require('fs/promises');
 const path = require('path');
+const os = require('os');
+const net = require('net');
+const { spawn } = require('child_process');
 const { createHash, randomUUID } = require('crypto');
 const { pathToFileURL } = require('url');
 
@@ -11,6 +14,11 @@ let mainWindow;
 let workspaceRoot = null;
 let microphoneAllowedForSession = false;
 const openedFiles = new Map();
+const activeProcesses = new Map();
+const MAX_AI_PROMPT_LENGTH = 16000;
+const MAX_AI_CONTEXT_LENGTH = 50000;
+const MAX_AI_RESPONSE_LENGTH = 32000;
+const MAX_PROCESS_OUTPUT_LENGTH = 1024 * 1024;
 
 function assertTrustedSender(event) {
   if (!mainWindow || event.sender !== mainWindow.webContents) {
@@ -78,12 +86,161 @@ ipcMain.handle('display:info', (event) => {
   return getMainWindowDisplayInfo();
 });
 
+ipcMain.handle('ai:complete', async (event, request) => {
+  assertTrustedSender(event);
+  if (!request || typeof request !== 'object') throw new Error('Invalid assistant request.');
+  const endpoint = validateAiEndpoint(request.endpoint);
+  const model = typeof request.model === 'string' ? request.model.trim() : '';
+  const prompt = typeof request.prompt === 'string' ? request.prompt.trim() : '';
+  const context = typeof request.context === 'string' ? request.context : '';
+  const apiKey = typeof request.apiKey === 'string' ? request.apiKey.trim() : '';
+  if (!model || model.length > 200) throw new Error('Enter a model name (up to 200 characters).');
+  if (!prompt || prompt.length > MAX_AI_PROMPT_LENGTH) throw new Error('Prompt must be between 1 and 16,000 characters.');
+  if (context.length > MAX_AI_CONTEXT_LENGTH) throw new Error('Included file context exceeds 50,000 characters.');
+  if (apiKey.length > 4096 || /[\r\n]/.test(apiKey)) throw new Error('Invalid API key.');
+
+  const messages = [
+    { role: 'system', content: 'You are a coding assistant. Give clear, concise answers. When asked to edit code, provide the complete replacement content in a fenced code block and explain which file it belongs to. Never claim changes were applied.' }
+  ];
+  if (context) messages.push({ role: 'user', content: `Current file context (read-only; do not assume other files):\n${context}` });
+  messages.push({ role: 'user', content: prompt });
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (apiKey) headers.Authorization = 'Bearer ' + apiKey;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ model, messages, stream: false }),
+    redirect: 'error',
+    signal: AbortSignal.timeout(120000)
+  });
+  const responseChunks = [];
+  let responseLength = 0;
+  const reader = response.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    responseLength += value.byteLength;
+    if (responseLength > 1024 * 1024) {
+      await reader.cancel();
+      throw new Error('AI provider response exceeded 1 MB.');
+    }
+    responseChunks.push(Buffer.from(value));
+  }
+  const raw = Buffer.concat(responseChunks).toString('utf8');
+  if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}: ${raw.slice(0, 1000)}`);
+  let result;
+  try {
+    result = JSON.parse(raw);
+  } catch {
+    throw new Error('AI provider returned invalid JSON.');
+  }
+  const answer = result.choices?.[0]?.message?.content;
+  if (typeof answer !== 'string') throw new Error('AI provider returned no assistant message.');
+  return answer.slice(0, MAX_AI_RESPONSE_LENGTH);
+});
+
+ipcMain.handle('process:start', async (event, request) => {
+  assertTrustedSender(event);
+  if (!workspaceRoot) throw new Error('Open a workspace before running or building files.');
+  if (activeProcesses.size > 0) throw new Error('A workspace process is already running.');
+  if (!request || !['run', 'build'].includes(request.action)) throw new Error('Unsupported process action.');
+  const filePath = resolveWorkspaceFile(request.file);
+  await assertNoSymlink(filePath);
+  const stats = await fs.lstat(filePath);
+  if (!stats.isFile()) throw new Error('Select a regular source file.');
+  const relativePath = path.relative(workspaceRoot, filePath);
+  const extension = path.extname(filePath).toLowerCase();
+  let command;
+  let args;
+  const env = {
+    PATH: process.env.PATH || '',
+    SystemRoot: process.env.SystemRoot || '',
+    USERPROFILE: process.env.USERPROFILE || '',
+    HOME: process.env.HOME || '',
+    TEMP: process.env.TEMP || os.tmpdir(),
+    TMP: process.env.TMP || os.tmpdir()
+  };
+
+  if (extension === '.js' && request.action === 'run') {
+    command = 'node';
+    args = [relativePath];
+  } else if (extension === '.js' && request.action === 'build') {
+    command = 'node';
+    args = ['--check', relativePath];
+  } else if (extension === '.py' && request.action === 'run') {
+    command = process.platform === 'win32' ? 'python' : 'python3';
+    args = [relativePath];
+  } else if (extension === '.py' && request.action === 'build') {
+    command = process.platform === 'win32' ? 'python' : 'python3';
+    args = ['-m', 'py_compile', relativePath];
+    env.PYTHONPYCACHEPREFIX = path.join(os.tmpdir(), 'nightmarecode-python-cache');
+  } else {
+    throw new Error('Real Build/Run currently supports JavaScript (.js) and Python (.py) files only.');
+  }
+
+  const jobId = randomUUID();
+  const child = spawn(command, args, {
+    cwd: workspaceRoot,
+    env,
+    shell: false,
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  activeProcesses.set(jobId, child);
+  let outputLength = 0;
+  const publishOutput = (chunk) => {
+    if (outputLength >= MAX_PROCESS_OUTPUT_LENGTH) return;
+    const text = chunk.toString('utf8').slice(0, MAX_PROCESS_OUTPUT_LENGTH - outputLength);
+    outputLength += Buffer.byteLength(text, 'utf8');
+    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('process:output', { jobId, text });
+    }
+  };
+  child.stdout.on('data', publishOutput);
+  child.stderr.on('data', publishOutput);
+  child.on('error', (error) => publishOutput(`\nCould not start ${command}: ${error.message}\n`));
+  child.on('close', (code, signal) => {
+    activeProcesses.delete(jobId);
+    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('process:complete', { jobId, code, signal });
+    }
+  });
+  return { jobId, command: [command, ...args].join(' ') };
+});
+
+ipcMain.handle('process:stop', (event, jobId) => {
+  assertTrustedSender(event);
+  const child = activeProcesses.get(jobId);
+  if (!child) return false;
+  return child.kill();
+});
+
 function getMainWindowDisplayInfo() {
   if (!mainWindow || mainWindow.isDestroyed()) return { external: false };
   const displays = screen.getAllDisplays();
   const currentDisplay = screen.getDisplayMatching(mainWindow.getBounds());
   const primaryDisplay = screen.getPrimaryDisplay();
   return { external: displays.length > 1 && currentDisplay.id !== primaryDisplay.id };
+}
+
+function validateAiEndpoint(value) {
+  if (typeof value !== 'string' || value.length > 2048) throw new Error('Enter a valid AI endpoint URL.');
+  let endpoint;
+  try {
+    endpoint = new URL(value);
+  } catch {
+    throw new Error('Enter a valid AI endpoint URL.');
+  }
+  if (endpoint.username || endpoint.password || endpoint.hash || endpoint.search) {
+    throw new Error('Endpoint URLs cannot contain credentials, query strings, or fragments.');
+  }
+  const hostname = endpoint.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const loopback = hostname === 'localhost' || net.isIP(hostname) === 4 && hostname.startsWith('127.') || hostname === '::1';
+  if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && loopback)) {
+    throw new Error('Use HTTPS for remote providers, or HTTP only for a local loopback model server.');
+  }
+  return endpoint.toString();
 }
 
 function notifyDisplayInfo() {

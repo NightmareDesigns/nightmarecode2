@@ -11,6 +11,21 @@ contextBridge.exposeInMainWorld('desktopApp', {
     ipcRenderer.on('display:info-changed', listener);
     return () => ipcRenderer.removeListener('display:info-changed', listener);
   },
+  completeWithAI: (request) => ipcRenderer.invoke('ai:complete', request),
+  startWorkspaceProcess: (request) => ipcRenderer.invoke('process:start', request),
+  stopWorkspaceProcess: (jobId) => ipcRenderer.invoke('process:stop', jobId),
+  onProcessOutput: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, result) => callback(result);
+    ipcRenderer.on('process:output', listener);
+    return () => ipcRenderer.removeListener('process:output', listener);
+  },
+  onProcessComplete: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, result) => callback(result);
+    ipcRenderer.on('process:complete', listener);
+    return () => ipcRenderer.removeListener('process:complete', listener);
+  },
   openWorkspace: () => ipcRenderer.invoke('workspace:open'),
   readWorkspaceFile: (filePath) => ipcRenderer.invoke('workspace:read', filePath),
   writeWorkspaceFile: (filePath, content) => ipcRenderer.invoke('workspace:write', filePath, content),

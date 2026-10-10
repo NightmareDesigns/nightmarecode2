@@ -47,8 +47,14 @@
                 <button class="menu-button" type="button">Build</button>
                 <div class="dropdown-menu">
                     <button data-action="build-file" type="button">Build current file</button>
-                    <button data-action="build-workspace" type="button">Build workspace</button>
                     <button data-action="run-file" type="button">Run current file</button>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="menu-button" type="button">AI</button>
+                <div class="dropdown-menu">
+                    <button data-action="toggle-ai" type="button">Open AI assistant</button>
+                    <button data-action="ai-apply" type="button">Replace selection with response</button>
                 </div>
             </div>
             <div class="dropdown">
@@ -131,12 +137,36 @@
                 <span id="voiceStatus">Voice off</span>
                 <span id="displayModeStatus">Standard display</span>
             </div>
-            <section class="terminal-panel" aria-label="Terminal demo">
-                <div class="terminal-heading"><span>TERMINAL · SAFE DEMO MODE</span><span>Commands are simulated; nothing executes on your system.</span></div>
-                <div id="terminal" class="terminal-output" aria-live="polite"></div>
-                <label class="terminal-prompt"><span>$</span><span class="visually-hidden">Demo terminal command</span>
-                    <input id="terminalInput" type="text" placeholder="Type help for available demo commands" autocomplete="off">
-                </label>
+            <section class="terminal-panel" aria-label="Run output and AI tools">
+                <div class="terminal-heading"><span>RUN OUTPUT</span><div><button id="toolsTerminalTab" class="quiet-button active-tool-tab" type="button">Run output</button><button id="toolsAiTab" class="quiet-button" type="button">AI assistant</button></div></div>
+                <div id="terminalView" class="tools-view">
+                    <div id="terminalNotice" class="terminal-notice">JavaScript and Python run/build actions execute locally with your account permissions after confirmation. This is not a sandbox.</div>
+                    <div id="terminal" class="terminal-output" aria-live="polite"></div>
+                    <button id="stopProcessBtn" class="quiet-button" type="button" hidden>Stop running process</button>
+                </div>
+                <div id="aiView" class="tools-view" hidden>
+                    <div class="ai-settings">
+                        <label>OpenAI-compatible endpoint
+                            <input id="aiEndpoint" type="url" value="http://127.0.0.1:11434/v1/chat/completions" autocomplete="off">
+                        </label>
+                        <label>Model
+                            <input id="aiModel" type="text" value="qwen2.5-coder:7b" autocomplete="off">
+                        </label>
+                        <label>API key (memory only)
+                            <input id="aiApiKey" type="password" placeholder="Optional for local models" autocomplete="off">
+                        </label>
+                        <label class="ai-context-toggle"><input id="aiIncludeFile" type="checkbox"> Include current file in request</label>
+                    </div>
+                    <label class="visually-hidden" for="aiPrompt">Ask the coding assistant</label>
+                    <textarea id="aiPrompt" class="ai-prompt" maxlength="16000" placeholder="Ask a question or request an edit…"></textarea>
+                    <div class="ai-actions">
+                        <button id="aiSendBtn" class="quiet-button" type="button">Ask model</button>
+                        <button id="aiInsertBtn" class="quiet-button" type="button" disabled>Insert at cursor</button>
+                        <button id="aiReplaceBtn" class="quiet-button" type="button" disabled>Replace selection</button>
+                    </div>
+                    <div id="aiResponse" class="ai-response" aria-live="polite"></div>
+                    <div class="terminal-notice">Prompts and checked file context go to the configured endpoint. Keys are not saved. Review every suggestion before applying.</div>
+                </div>
             </section>
         </section>
     </main>

@@ -39,7 +39,6 @@ class AppMenu {
 
     handleAction(action) {
         const editor = document.getElementById('codeEditor');
-        const terminal = document.getElementById('terminalInput');
         const manager = window.fileManager;
 
         switch (action) {
@@ -94,7 +93,8 @@ class AppMenu {
                 editor?.focus();
                 break;
             case 'focus-terminal':
-                terminal?.focus();
+                window.editorInstance?.showToolsView('terminal');
+                document.querySelector('.terminal-panel')?.classList.remove('collapsed');
                 break;
             case 'toggle-glasses-mode':
                 window.editorInstance?.toggleGlassesMode();
@@ -103,13 +103,17 @@ class AppMenu {
                 document.querySelector('.settings-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 break;
             case 'run-file':
-                this.runDemoCommand(`run ${manager?.currentFile || ''}`);
+                this.runWorkspaceAction(`run ${manager?.currentFile || ''}`);
                 break;
             case 'build-file':
-                this.runDemoCommand(`build ${manager?.currentFile || ''}`.trim());
+                this.runWorkspaceAction(`build ${manager?.currentFile || ''}`.trim());
                 break;
-            case 'build-workspace':
-                this.runDemoCommand('build workspace');
+            case 'toggle-ai':
+                window.editorInstance?.showToolsView('ai');
+                document.querySelector('.terminal-panel')?.classList.remove('collapsed');
+                break;
+            case 'ai-apply':
+                window.editorInstance?.applyAIResponse(true);
                 break;
             case 'voice-dictation':
                 window.editorInstance?.toggleVoice('dictation');
@@ -126,12 +130,10 @@ class AppMenu {
                 break;
             case 'run-terminal':
                 document.querySelector('.terminal-panel')?.classList.remove('collapsed');
-                terminal?.focus();
+                window.editorInstance?.showToolsView('terminal');
                 break;
             case 'help-commands':
-                if (window.editorInstance && typeof window.editorInstance.processTerminalCommand === 'function') {
-                    window.editorInstance.processTerminalCommand('help');
-                }
+                window.fileManager?.notify('Build/Run currently supports .js and .py workspace files; AI uses an OpenAI-compatible endpoint.');
                 break;
             case 'about':
                 alert('Nightmare Designs Code\n\nDark editor shell with Matrix visual theme.');
@@ -141,7 +143,7 @@ class AppMenu {
         }
     }
 
-    runDemoCommand(command) {
+    runWorkspaceAction(command) {
         document.querySelector('.terminal-panel')?.classList.remove('collapsed');
         if (window.editorInstance && typeof window.editorInstance.processTerminalCommand === 'function') {
             window.editorInstance.processTerminalCommand(command);
