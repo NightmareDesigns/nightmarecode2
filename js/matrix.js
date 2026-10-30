@@ -7,13 +7,13 @@ class MatrixBackground {
         if (!this.ctx) return;
 
         this.defaults = {
-            matrixOpacity: 42,
-            matrixColor: '#39ff14',
-            backgroundColor: '#000000',
-            frameColor: '#8b0000',
-            textColor: '#39ff14',
-            panelOpacity: 60,
-            speed: 3
+            matrixOpacity: 10,
+            matrixColor: '#4daafc',
+            backgroundColor: '#1e1e1e',
+            frameColor: '#007acc',
+            textColor: '#d4d4d4',
+            panelOpacity: 92,
+            speed: 2
         };
 
         this.resizeCanvas();
@@ -131,9 +131,9 @@ class MatrixBackground {
     }
 
     hexToRgba(hex, alpha) {
-        const safeHex = /^#([A-Fa-f0-9]{6})$/.test(hex) ? hex : '#39ff14';
+        const safeHex = /^#([A-Fa-f0-9]{6})$/.test(hex) ? hex : '#4daafc';
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(safeHex);
-        if (!result) return `rgba(57, 255, 20, ${alpha})`;
+        if (!result) return `rgba(77, 170, 252, ${alpha})`;
         const r = parseInt(result[1], 16);
         const g = parseInt(result[2], 16);
         const b = parseInt(result[3], 16);
@@ -168,11 +168,11 @@ class MatrixBackground {
     applyTheme() {
         const root = document.documentElement;
         root.style.setProperty('--dark-bg', this.theme.backgroundColor);
-        root.style.setProperty('--dark-bg-secondary', this.theme.backgroundColor);
-        root.style.setProperty('--dark-bg-tertiary', '#0d0d0d');
+        root.style.setProperty('--dark-bg-secondary', '#252526');
+        root.style.setProperty('--dark-bg-tertiary', '#2d2d30');
         root.style.setProperty('--border-color', this.theme.frameColor);
         root.style.setProperty('--text-color', this.theme.textColor);
-        root.style.setProperty('--primary-color', this.theme.textColor);
+        root.style.setProperty('--primary-color', this.theme.frameColor);
         root.style.setProperty('--matrix-color', this.theme.matrixColor);
         root.style.setProperty('--panel-opacity', (this.theme.panelOpacity / 100).toString());
     }
@@ -193,6 +193,16 @@ class MatrixBackground {
                 return;
             }
             const parsed = JSON.parse(raw);
+            if (parsed.backgroundColor === '#000000' && parsed.frameColor === '#8b0000' &&
+                parsed.matrixColor === '#39ff14' && parsed.textColor === '#39ff14' &&
+                parsed.matrixOpacity === 42 && parsed.panelOpacity === 60 && parsed.speed === 3) {
+                this.theme = { ...this.defaults };
+                this.opacity = this.theme.matrixOpacity / 100;
+                this.applyTheme();
+                this.syncThemeUI();
+                this.saveTheme();
+                return;
+            }
             this.theme = {
                 ...this.defaults,
                 ...parsed

@@ -19,8 +19,8 @@
   "author": "NightmareDesigns",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.0"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.17.0"
   },
   "build": {
     "appId": "com.nightmaredesigns.nightmarecode2",
@@ -32,6 +32,7 @@
       "**/*",
       "!**/.git/**",
       "!**/dist/**",
+      "!**/android/**",
       "!**/node_modules/**"
     ],
     "win": {
@@ -44,6 +45,12 @@
         }
       ],
       "artifactName": "NightmareDesignsCode-${version}-portable.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
     }
   }
 }
